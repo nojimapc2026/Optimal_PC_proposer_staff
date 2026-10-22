@@ -1,2 +1,0 @@
-﻿model,jan,cpuSingle,cpuMulti,npuCores,gpu,ramGB,ssdGB,weightG,design,displayInch,aspectRatio,manufacturerMask,failureFrequency,readability,positioning
-test,4900000000000,1000,8000,2,3000,16,512,2000,3,16,1.600000,2,0,7,3
