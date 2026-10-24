@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#edf5ff">
-  <meta name="description" content="スタッフ専用 PC相談QR読取・PCカタログCSV管理">
+  <meta name="description" content="スタッフ専用 PC相談QR読取・Firebase PCカタログ管理">
   <title>スタッフ用｜PCコンシェルジュ</title>
   <style>
     :root{color-scheme:light;--ink:#162a43;--sub:#435a73;--muted:#74869a;--paper:#f1f6fc;--white:#fff;--line:#dce7f2;--blue:#1468c7;--blue2:#328bea;--navy:#123f72;--sky:#e8f3ff;--teal:#1aa894;--gold:#ca871f;--red:#ba4552;--shadow:0 18px 48px rgba(26,70,120,.09);--radius:25px;--font:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Display","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
@@ -27,7 +27,7 @@
   <header class="topbar"><div class="topbar-inner"><span class="brand-mark" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 32 32" fill="none"><path d="M7 9.5A3.5 3.5 0 0 1 10.5 6h11A3.5 3.5 0 0 1 25 9.5v8a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 7 17.5v-8Z" stroke="white" stroke-width="2.3"/><path d="M4.5 24h23l-2.7-3H7.2l-2.7 3Z" fill="white"/><path d="m16 9 .9 2.2 2.2.9-2.2.9-.9 2.2-.9-2.2-2.2-.9 2.2-.9L16 9Z" fill="#a6e8ff"/></svg></span><span class="brand"><strong>PCコンシェルジュ</strong><small>STAFF DESK · PC CATALOG</small></span><span class="staff-pill">STAFF ONLY</span></div></header>
   <main id="main">
     <div class="page">
-      <section class="intro"><span class="eyebrow"><i class="dot"></i>STAFF WORKSPACE</span><h1>相談QRを読み取り、<br>次の一台をカタログへ。</h1><p>QRの数値ベクトルを仕様一覧に変換し、PCカタログCSVをこの端末内で管理します。</p></section>
+      <section class="intro"><span class="eyebrow"><i class="dot"></i>STAFF WORKSPACE</span><h1>相談QRを読み取り、<br>次の一台をカタログへ。</h1><p>QRの数値ベクトルを仕様一覧に変換し、PCカタログをFirebase Firestoreで共有管理します。</p></section>
       <section class="card" id="scanner-card">
         <div class="card-head"><div class="card-title"><span class="step-icon" aria-hidden="true">▦</span><div><h2>相談QRを読み取る</h2><p>カメラ、QR画像、または数値文字列から14スペックと15回答を解析</p></div></div><span class="card-badge">STEP 01</span></div>
         <div class="scan-grid"><div class="scan-controls"><div class="action-row"><button class="btn btn-primary" type="button" data-action="scan-qr">▦ カメラでQRを読む</button><label class="btn btn-soft">画像を選択<input class="hidden-input" type="file" id="qr-image" accept="image/*"></label></div><textarea id="qr-paste" class="paste-area" placeholder="version 2/3の30数値CSVを貼り付ける場合"></textarea><div class="action-row" style="margin-top:8px"><button class="btn btn-plain btn-small" type="button" data-action="read-paste">CSVを解析</button></div><p class="hint">QRはURLや文章を含まない数値30項目（version 2/3の版・14スペック・15回答コード）です。</p><div id="scan-status" class="status" role="status"></div></div><div class="scanner-stage" id="scanner-placeholder"><div><span class="scan-symbol" aria-hidden="true">⌗</span><p>読み取り待機中</p><small>カメラを起動するとスキャン画面を表示します</small></div></div></div>
@@ -39,11 +39,16 @@
         <section class="result-card"><h2>質問ごとの回答</h2><p class="section-lead">QRに含まれる番号表から15問の選択内容を復号して表示します。</p><div id="answer-list" class="answer-list"></div></section>
       </section>
       <section class="card" id="catalog-card">
-        <div class="card-head"><div class="card-title"><span class="step-icon" aria-hidden="true">▤</span><div><h2>PCカタログ CSV</h2><p>既存CSVを読み込むか、新規CSVを作成して機種を登録</p></div></div><span class="card-badge">STEP 02</span></div>
-        <div class="catalog-actions"><div class="action-row"><label class="btn btn-soft">既存CSVを読み込む<input class="hidden-input" type="file" id="catalog-file" accept=".csv,text/csv"></label><button class="btn btn-plain" type="button" data-action="new-csv">新規CSVを作成</button></div><div class="file-summary" id="catalog-summary">CSV未選択</div></div>
-        <div class="catalog-help"><strong>共有保存先：</strong><code>pc_data/pc_data_YYYY_MM_DD_HH_MM_SS.csv</code><br><strong>基本列順：</strong><code>model,jan,cpuSingle,cpuMulti,npuCores,gpu,ramGB,ssdGB,weightG,design,displayInch,aspectRatio,manufacturerMask,failureFrequency,readability,positioning</code><br>空の雛形は互換性の高い16列です。商品紹介 <code>highlights</code> は任意の17列目として読込でき、編集後のCSV書出しでは常に追加します。型番・JANは識別用、続く14数値列は元ベクトル順です。編集CSVはダウンロードし、最新版としてGitのpc_data/へ追加してください。</div>
-        <div id="catalog-status" class="status" role="status"></div><div id="product-list" class="product-list"><div class="empty-list">既存CSVを読み込むか「新規CSVを作成」すると、機種を管理できます。</div></div>
-        <div class="download-row"><span class="file-summary" id="download-summary">CSVを準備するとダウンロードできます</span><button class="btn btn-primary" id="download-csv" type="button" data-action="download-csv" disabled>CSVを書き出してダウンロード</button></div>
+        <div class="card-head"><div class="card-title"><span class="step-icon" aria-hidden="true">▤</span><div><h2>Firebase PCカタログ</h2><p>Firestoreを共有データベースとして機種情報を管理</p></div></div><span class="card-badge">STEP 02</span></div>
+        <section class="catalog-help" aria-label="スタッフ認証">
+          <strong>スタッフ認証</strong><p style="margin:5px 0 10px">編集・登録・削除を行うにはスタッフアカウントでログインしてください。アカウントはFirebase Authenticationで管理します。</p>
+          <form id="staff-login-form" class="action-row" style="align-items:end"><div class="field-wrap"><label class="field-label" for="staff-email">メールアドレス</label><input class="field" id="staff-email" type="email" autocomplete="username" required></div><div class="field-wrap"><label class="field-label" for="staff-password">パスワード</label><input class="field" id="staff-password" type="password" autocomplete="current-password" required></div><button class="btn btn-soft" type="submit" id="staff-login-button">スタッフログイン</button></form>
+          <div id="staff-authenticated" hidden><span class="file-summary" id="staff-identity"></span> <button class="btn btn-plain btn-small" type="button" id="staff-logout">ログアウト</button></div><div id="auth-status" class="status" role="status"></div>
+        </section>
+        <div class="catalog-actions" style="margin-top:14px"><span class="file-summary" id="catalog-summary">Firestore接続中…</span><div class="action-row"><button class="btn btn-soft" type="button" data-action="reload-catalog">再読み込み</button><button class="btn btn-primary" id="reflect-changes" type="button" data-action="reflect-changes" disabled>変更を反映</button></div></div>
+        <div class="catalog-help"><strong>保存先：</strong><code>Cloud Firestore / pc_catalog</code><br><strong>レコード項目：</strong><code>model,jan,cpuSingle,cpuMulti,npuCores,gpu,ramGB,ssdGB,weightG,design,displayInch,aspectRatio,manufacturerMask,failureFrequency,readability,positioning,highlights</code><br>CSVと同じ17列の対応・値を保存し、JANは文字列でドキュメントIDにも使います。入力・訂正・削除は端末内に一時反映し、「変更を反映」でFirestoreへ保存します。CSVはバックアップ用に書き出せますが、カタログ読込元には使いません。</div>
+        <div id="catalog-status" class="status" role="status"></div><div id="product-list" class="product-list"><div class="empty-list">Firebase Firestoreからカタログを読み込んでいます。</div></div>
+        <div class="download-row"><span class="file-summary" id="download-summary">Firestoreカタログを読み込んでいます</span><button class="btn btn-primary" id="download-csv" type="button" data-action="download-csv" disabled>バックアップCSVをダウンロード</button></div>
         <section class="form-wrap" id="product-form-wrap" hidden>
           <div class="form-top"><div><h3 id="form-title">新しいPCを登録</h3><p>型番・JAN・14項目ベクトル・魅力紹介を入力</p></div><button class="icon-btn" type="button" data-action="close-form" aria-label="入力フォームを閉じる">×</button></div>
           <form id="product-form" novalidate>
@@ -53,15 +58,144 @@
             </div>
             <div class="field-wrap wide"><label class="field-label" for="highlights">商品の魅力・特徴</label><textarea class="paste-area" id="highlights" name="highlights" maxlength="500" placeholder="おすすめポイントを短く登録（CSVのhighlights列）"></textarea><p class="field-note">500文字以内。顧客・スタッフ両方のおすすめカードに表示します。</p></div>
             <div class="section-divider"></div><p class="grid-subtitle">14項目のPCベクトル（指定順）</p><div class="form-grid" id="vector-fields"></div>
-            <div class="form-actions"><button class="btn btn-plain" type="button" data-action="cancel-form">キャンセル</button><button class="btn btn-primary" id="save-product" type="submit">CSVに追加</button></div>
+            <div class="form-actions"><button class="btn btn-plain" type="button" data-action="cancel-form">キャンセル</button><button class="btn btn-primary" id="save-product" type="submit">登録内容を保存</button></div>
           </form>
         </section>
-        <div class="action-row" style="justify-content:center;margin-top:19px"><button class="btn btn-primary" type="button" data-action="open-form">＋ PC登録</button></div>
+        <div class="action-row" style="justify-content:center;margin-top:19px"><button class="btn btn-primary" id="open-form-button" type="button" data-action="open-form" disabled>＋ PC登録</button></div>
       </section>
     </div>
   </main>
-  <footer class="footer"><p>スタッフ専用ツール · QR解析とCSV編集はブラウザー内で処理</p><p>CSVのベクトル列は14項目の順序・単位を維持</p></footer>
+  <footer class="footer"><p>スタッフ専用ツール · 商品カタログはFirebase Firestoreで共有</p><p>バックアップCSVの列順・14項目ベクトル・JAN形式は従来どおりです</p></footer>
   <dialog id="scanner-dialog"><div class="dialog-inner"><div class="dialog-head"><h2 id="scanner-title">カメラ読取</h2><button class="icon-btn" type="button" data-action="close-scanner" aria-label="カメラを閉じる">×</button></div><video id="camera-video" class="camera-video" playsinline muted autoplay></video><p class="camera-state" id="camera-state" role="status">カメラを準備しています…</p></div></dialog>
+
+  <script>
+    window.PcFirebaseReady = new Promise((resolve,reject)=>{window.__resolvePcFirebase=resolve;window.__rejectPcFirebase=reject});
+  </script>
+  <script type="module">
+    try {
+      const [appSdk, firestoreSdk, authSdk] = await Promise.all([
+        import('https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js'),
+        import('https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js')
+      ]);
+      const firebaseConfig = {
+        apiKey: "AIzaSyB09u8CPE0TzG6D7lul1hCOc2a_TRrM5BY",
+        authDomain: "optimal-pc-proposer.firebaseapp.com",
+        projectId: "optimal-pc-proposer",
+        storageBucket: "optimal-pc-proposer.firebasestorage.app",
+        messagingSenderId: "1029515485045",
+        appId: "1:1029515485045:web:38cd3f6a86b2d584a27d3c",
+        measurementId: "G-FD5LD1WDTF"
+      };
+      const app = appSdk.initializeApp(firebaseConfig,'pc-concierge-catalog');
+      const database = firestoreSdk.getFirestore(app);
+      const auth = authSdk.getAuth(app);
+      const catalogRef = firestoreSdk.collection(database,'pc_catalog');
+    const catalogCollectionName = 'pc_catalog';
+    const fieldKeys = ['cpuSingle','cpuMulti','npuCores','gpu','ramGB','ssdGB','weightG','design','displayInch','aspectRatio','manufacturerMask','failureFrequency','readability','positioning'];
+    const withFirestoreTimeout = promise => new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>{const error=new Error('Firestoreからサーバー応答がありません。Cloud Firestore APIと(default)データベースの有効状態を確認してください。');error.code='read-timeout';reject(error)},12000);
+      Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});
+    });
+    const databaseMessage = error => {
+      const message = String(error?.message || '');
+      const code = String(error?.code || '');
+      if (/Cloud Firestore API has not been used|firestore\.googleapis\.com.*disabled|SERVICE_DISABLED|API.*disabled/i.test(message)) return new Error('Cloud Firestore APIが無効です。Google Cloud ConsoleでFirestore APIを有効にし、Firebase ConsoleでCloud Firestoreのデータベースを作成してください。');
+      if (code === 'not-found') return new Error('Firestoreの(default)データベースが見つかりません。Firebase ConsoleでCloud Firestoreデータベースを作成してください。');
+      if (code === 'read-timeout') return new Error('Firestoreサーバーが応答しません。Cloud Firestore APIが有効か、(default)データベースが作成済みか確認してください。');
+      if (code === 'permission-denied') return new Error('Firestore Security Rulesで拒否されました。カタログ読取ルールとスタッフ認証・許可設定を確認してください。');
+      if (code === 'unavailable' || code === 'deadline-exceeded') return new Error('Firestoreに接続できません。APIの有効化、データベースの作成、ネットワークを確認してください。');
+      if (code === 'failed-precondition') return new Error('Firestoreがまだ準備されていないか、クエリ条件が不足しています。データベースとインデックス設定を確認してください。');
+      if (code === 'auth/operation-not-allowed') return new Error('Firebase Authenticationのメール/パスワード方式が無効です。Firebase Consoleで有効にしてください。');
+      if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') return new Error('スタッフ用メールアドレスまたはパスワードを確認してください。');
+      if (code === 'auth/network-request-failed') return new Error('Firebase Authenticationに接続できません。ネットワークを確認してください。');
+      if (code === 'auth/too-many-requests') return new Error('ログイン試行が多すぎます。しばらく待ってから再度お試しください。');
+      return new Error(message || 'Firebaseとの通信に失敗しました。');
+    };
+    const productData = product => ({
+      model: String(product.model ?? '').trim(),
+      jan: String(product.jan ?? '').trim(),
+      ...Object.fromEntries(fieldKeys.map((key,index)=>[key,Number(product.vector[index])])),
+      highlights: String(product.highlights ?? '')
+    });
+    const productFromDocument = snapshot => {
+      const data = snapshot.data();
+      if (!data || typeof data.model !== 'string' || !data.model.trim()) throw new Error(`Firestoreの ${snapshot.id} に型番がありません。`);
+      if (typeof data.jan !== 'string' || data.jan !== snapshot.id) throw new Error(`Firestoreの ${snapshot.id} はJANを文字列で保存し、ドキュメントIDと一致させてください。`);
+      const vector = fieldKeys.map(key => Number(data[key]));
+      if (vector.some(value => !Number.isFinite(value))) throw new Error(`Firestoreの ${snapshot.id} は14項目のベクトルが不足または不正です。`);
+      if (Object.keys(data).some(key => !['model','jan',...fieldKeys,'highlights'].includes(key))) throw new Error(`Firestoreの ${snapshot.id} にCSV仕様外の項目があります。`);
+      return {model:data.model,jan:data.jan,vector,highlights:String(data.highlights ?? ''),docId:snapshot.id};
+    };
+    const readCatalog = async () => {
+      try {
+        const snapshot = await withFirestoreTimeout(firestoreSdk.getDocsFromServer(firestoreSdk.collection(database,catalogCollectionName)));
+        return snapshot.docs.map(productFromDocument).sort((a,b)=>a.model.localeCompare(b.model,'ja')||a.jan.localeCompare(b.jan,'en'));
+      } catch (error) { throw databaseMessage(error); }
+    };
+
+      const api = Object.freeze({
+        list: readCatalog,
+        async hasJan(jan) { try { return (await withFirestoreTimeout(firestoreSdk.getDocFromServer(firestoreSdk.doc(database,'pc_catalog',String(jan))))).exists(); } catch (error) { throw databaseMessage(error); } },
+        signIn(email,password) { return authSdk.signInWithEmailAndPassword(auth,email,password).catch(error=>{throw databaseMessage(error)}); },
+        signOut() { return authSdk.signOut(auth).catch(error=>{throw databaseMessage(error)}); },
+        onAuthChanged(callback) { return authSdk.onAuthStateChanged(auth,callback); },
+        friendlyError: databaseMessage,
+        async replaceCatalog(products,baseline) {
+          const wanted = new Set();
+          const payloads = products.map(product=>{
+            const payload=productData(product);
+            if (!payload.model) throw new Error('型番を入力してください。');
+            if (!/^\d{8}$|^\d{13}$/.test(payload.jan)) throw new Error('JANコードは8桁または13桁の数字文字列が必要です。');
+            if (wanted.has(payload.jan)) { const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。`); duplicate.code='duplicate-jan'; throw duplicate; }
+            wanted.add(payload.jan);
+            return {product,payload};
+          });
+          try {
+            return await firestoreSdk.runTransaction(database,async transaction=>{
+              const currentSnapshot=await transaction.get(catalogRef);
+              const current=new Map(currentSnapshot.docs.map(snapshot=>[snapshot.id,snapshot.data()]));
+              for (const {product,payload} of payloads) {
+                const sourceId=String(product.docId||'');
+                if (current.has(payload.jan) && sourceId!==payload.jan) { const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`); duplicate.code='duplicate-jan'; throw duplicate; }
+              }
+              const expected=new Map((baseline||[]).map(product=>[String(product.docId),productData(product)]));
+              if (current.size!==expected.size || [...current.keys()].some(id=>!expected.has(id))) { const conflict=new Error('Firestoreのカタログが別の操作で更新されています。再読み込みしてからやり直してください。'); conflict.code='catalog-conflict'; throw conflict; }
+              for (const [id,expectedData] of expected) {
+                const actual=current.get(id);
+                if (!actual || ['model','jan',...fieldKeys,'highlights'].some(key=>String(actual[key]??'')!==String(expectedData[key]??''))) { const conflict=new Error('Firestoreのカタログが別の操作で更新されています。再読み込みしてからやり直してください。'); conflict.code='catalog-conflict'; throw conflict; }
+              }
+              for (const {product,payload} of payloads) {
+                const sourceId=String(product.docId||'');
+                if (current.has(payload.jan) && sourceId!==payload.jan) { const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`); duplicate.code='duplicate-jan'; throw duplicate; }
+                if (sourceId && !current.has(sourceId)) { const conflict=new Error('編集対象がFirestoreから見つかりません。再読み込みしてください。'); conflict.code='catalog-conflict'; throw conflict; }
+              }
+              const retainedSourceIds=new Set(payloads.map(({product})=>String(product.docId||'')).filter(Boolean));
+              const deletes=new Set([...current.keys()].filter(id=>!retainedSourceIds.has(id)));
+              for (const {product,payload} of payloads) { const sourceId=String(product.docId||''); if (sourceId && sourceId!==payload.jan) deletes.add(sourceId); }
+              const dataKeys=['model','jan',...fieldKeys,'highlights'];
+              const changed=payloads.filter(({payload})=>{
+                const actual=current.get(payload.jan);
+                return !actual||dataKeys.some(key=>String(actual[key]??'')!==String(payload[key]??''));
+              });
+              if (changed.length+deletes.size>450) throw new Error('一度に反映する実変更数が上限（450件）を超えています。変更を分けて反映してください。');
+              for (const {payload} of changed) transaction.set(firestoreSdk.doc(database,'pc_catalog',payload.jan),payload);
+              for (const id of deletes) transaction.delete(firestoreSdk.doc(database,'pc_catalog',id));
+              return {saved:changed.length,deleted:deletes.size};
+            });
+          } catch (error) {
+            if (error?.code==='duplicate-jan' || error?.code==='catalog-conflict') throw error;
+            throw databaseMessage(error);
+          }
+        }
+      });
+      window.__resolvePcFirebase(api);
+    } catch (error) {
+      const message = String(error?.message || 'Firebase SDKを読み込めません。ネットワークとCDN接続を確認してください。');
+      window.__rejectPcFirebase(new Error(message));
+    }
+  </script>
+
   <script>
 
     /* Bundled QR libraries: qrcode-generator 1.4.4 (MIT, Kazuhiko Arase); jsQR 1.4.0 (Apache-2.0, jsQR contributors). */
@@ -114,7 +248,7 @@
     const HEADER=['model','jan',...FIELDS.map(f=>f.key),'highlights'];
     const LEGACY_HEADER=HEADER.slice(0,-1);
     const SPEC_LABELS=FIELDS.map(f=>f.label);
-    const state={vector:null,answers:null,protocolVersion:null,products:[],ready:false,sourceName:'',editIndex:-1,cameraStream:null,cameraFrame:0,cameraMode:'qr',barcodeDetector:null,scanBusy:false};
+    const state={vector:null,answers:null,protocolVersion:null,products:[],baselineProducts:[],ready:false,loadError:'',hasChanges:false,authUser:null,sourceName:'Firebase Firestore',editIndex:-1,cameraStream:null,cameraFrame:0,cameraMode:'qr',barcodeDetector:null,scanBusy:false};
     const $=id=>document.getElementById(id);
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const pad=n=>String(n).padStart(2,'0');
@@ -146,33 +280,106 @@
     $('scanner-dialog').addEventListener('close',stopCamera);
     function csvEscape(value){const s=String(value??'');return /[",\r\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
     function serializeCsv(products){return [HEADER,...products.map(p=>[p.model,p.jan,...p.vector.map((v,i)=>i===9?Number(v).toFixed(6):String(v)),p.highlights||''])].map(row=>row.map(csvEscape).join(',')).join('\r\n')+'\r\n'}
-    function parseCsv(text){const src=String(text||'').replace(/^\uFEFF/,'');const rows=[];let row=[],cell='',quoted=false,afterQuote=false;const pushCell=()=>{row.push(cell);cell='';afterQuote=false};const pushRow=()=>{pushCell();if(row.some(v=>v!==''))rows.push(row);row=[]};for(let i=0;i<src.length;i++){const ch=src[i];if(quoted){if(ch==='"'&&src[i+1]==='"'){cell+='"';i++}else if(ch==='"'){quoted=false;afterQuote=true}else cell+=ch}else if(afterQuote){if(ch===',')pushCell();else if(ch==='\n')pushRow();else if(ch==='\r'){if(src[i+1]==='\n')i++;pushRow()}else throw new Error('CSVの閉じ引用符の後はカンマまたは改行が必要です。')}else if(ch==='"'){if(cell.length)throw new Error('CSVの引用符の位置が正しくありません。');quoted=true}else if(ch===',')pushCell();else if(ch==='\n')pushRow();else if(ch==='\r'){if(src[i+1]==='\n')i++;pushRow()}else cell+=ch}if(quoted)throw new Error('CSVの引用符が閉じていません。');if(cell!==''||row.length||afterQuote){row.push(cell);if(row.some(v=>v!==''))rows.push(row)}return rows}
-    function validJan(value){const jan=String(value??'').trim();if(!/^\d{8}$|^\d{13}$/.test(jan))return false;const digits=[...jan].map(Number),check=digits.pop();let sum=0;for(let i=digits.length-1,step=0;i>=0;i--,step++)sum+=digits[i]*(step%2===0?3:1);return (10-sum%10)%10===check}
-    function headerMatches(actual,expected){return actual.length===expected.length&&actual.every((value,index)=>String(value??'').replace(/^\uFEFF/,'').trim()===expected[index])}
-    function parseCatalogText(text){const rows=parseCsv(text);if(!rows.length)throw new Error('空のCSVです。');const hasHighlights=headerMatches(rows[0],HEADER),legacy=headerMatches(rows[0],LEGACY_HEADER);if(!hasHighlights&&!legacy)throw new Error('CSVヘッダーが一致しません。16列の基本形式、または末尾にhighlightsを付けた17列形式が必要です。先頭行の列名・順序とカンマ区切りを確認してください。');const products=rows.slice(1).map((row,index)=>validateProduct(row,index,hasHighlights));return products}
-    function validateProduct(raw,index,hasHighlights){const line=index+2,expected=hasHighlights?17:16;if(raw.length!==expected)throw new Error(`${line}行目は${expected}列が必要です（読取 ${raw.length} 列）。`);const model=String(raw[0]).trim(),jan=String(raw[1]).trim();if(!model)throw new Error(`${line}行目：型番が空です。`);if(!validJan(jan))throw new Error(`${line}行目：JANコードの桁数またはチェックデジットが不正です。`);const vector=validateVector(raw.slice(2,16));if(vector[10]!==0&&(vector[10]&(vector[10]-1))!==0)throw new Error(`${line}行目：メーカーは0または単一メーカーで指定してください。`);const highlights=hasHighlights?String(raw[16]??'').trim():'';if(highlights.length>500)throw new Error(`${line}行目：highlightsは500文字以内です。`);return {model,jan,vector,highlights}}
     function normalizeMatchValue(index,value){const lo=[[0,3000],[0,40000],[0,80],[0,25000],[4,128],[128,8192],[700,3000],[1,10],[13.3,16],null,null,null,[1,10],[1,10]][index];return Math.max(0,Math.min(1,(Number(value)-lo[0])/(lo[1]-lo[0])))}
     const MATCH_WEIGHTS=[1,1,.8,.6,1,.9,.7,.5,1,.7,.65,.55,.65,.5];
     function matchScore(customer,product){let total=0,weightTotal=0;for(let i=0;i<14;i++){let similarity;if(i===2){const required=normalizeMatchValue(2,customer[i]),available=normalizeMatchValue(2,product[i]);similarity=required===0?1:1-Math.max(0,required-available)}else if(i===9)similarity=Math.abs(Number(customer[i])-Number(product[i]))<.00001?1:0;else if(i===10)similarity=Number(customer[i])===0||((Number(customer[i])&Number(product[i]))!==0)?1:0;else if(i===11)similarity=Number(customer[i])===Number(product[i])?1:0;else similarity=1-Math.abs(normalizeMatchValue(i,customer[i])-normalizeMatchValue(i,product[i]));total+=MATCH_WEIGHTS[i]*similarity;weightTotal+=MATCH_WEIGHTS[i]}return total/weightTotal*100}
     function rankProducts(customer,products,count){return products.map((product,index)=>({...product,match:matchScore(customer,product.vector),_index:index})).sort((a,b)=>Math.abs(b.match-a.match)>1e-12?b.match-a.match:a.model.localeCompare(b.model,'ja')||a.jan.localeCompare(b.jan,'en')||a._index-b._index).slice(0,count)}
     const EAN_L=['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'],EAN_G=['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'],EAN_R=['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'],EAN13_PARITY=['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
     function barcodeSvg(jan){const digits=String(jan);if(!validJan(digits))return '<span class="barcode-missing">JANコードを確認</span>';let bits='101';if(digits.length===13){const parity=EAN13_PARITY[Number(digits[0])];for(let i=1;i<=6;i++)bits+=(parity[i-1]==='L'?EAN_L:EAN_G)[Number(digits[i])];bits+='01010';for(let i=7;i<13;i++)bits+=EAN_R[Number(digits[i])]}else{for(let i=0;i<4;i++)bits+=EAN_L[Number(digits[i])];bits+='01010';for(let i=4;i<8;i++)bits+=EAN_R[Number(digits[i])]}bits+='101';const quiet=9,width=bits.length+quiet*2,guard=i=>i<3||(bits.length===95&&i>=45&&i<50)||(bits.length===67&&i>=31&&i<36)||i>=bits.length-3,bars=[...bits].map((bit,i)=>bit==='1'?`<rect x="${i+quiet}" y="${guard(i)?2:5}" width="1" height="${guard(i)?57:51}"/>`:'').join('');return `<svg class="jan-barcode" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 62" role="img" aria-label="JANバーコード">${bars}</svg>`}
-    function staffCatalogBasePath(){const path=window.location.pathname||'/';const staffRoute=path.match(/^(.*\/)staff(?:\/index\.html)?\/?$/i);if(staffRoute)return staffRoute[1]||'/';if(path.endsWith('/'))return path;const last=path.slice(path.lastIndexOf('/')+1);return /\.[a-z0-9]+$/i.test(last)?path.slice(0,path.lastIndexOf('/')+1):`${path}/`}
-    function staffGithubPagesRepo(){const host=String(window.location.hostname||'').toLowerCase(),suffix='.github.io';if(!host.endsWith(suffix))return null;const owner=host.slice(0,-suffix.length),segments=(window.location.pathname||'/').split('/').filter(Boolean);let repo;try{repo=segments.length?decodeURIComponent(segments[0]):`${owner}.github.io`}catch{return null}return owner&&repo?{owner,repo}:null}
-    async function latestStaffCatalogFilename(base){const repo=staffGithubPagesRepo();let apiFailure='';if(repo){try{const apiUrl=`https://api.github.com/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.repo)}/contents/pc_data?per_page=1000`;const apiResponse=await fetch(apiUrl,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});if(apiResponse.ok){const entries=await apiResponse.json(),files=(Array.isArray(entries)?entries:[]).filter(item=>item&&item.type==='file'&&/^pc_data_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.csv$/.test(item.name)).map(item=>item.name).sort();if(files.length)return files[files.length-1];apiFailure=`${repo.owner}/${repo.repo}/pc_data に日時形式のCSVが見つかりません。`}else apiFailure=`GitHub APIはHTTP ${apiResponse.status} を返しました。`}catch(error){apiFailure=error?.message||'GitHub APIへの接続に失敗しました。'}}let manifestFailure='';try{const response=await fetch(`${base}latest.json`,{cache:'no-store'});if(response.ok){const manifest=await response.json();if(/^pc_data_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.csv$/.test(manifest.filename||''))return manifest.filename;manifestFailure='latest.json内のCSV名が指定形式ではありません。'}else manifestFailure=`latest.jsonはHTTP ${response.status}を返しました。`}catch(error){manifestFailure=`latest.jsonを取得できません（${error?.message||'通信エラー'}）。`}if(repo)throw new Error(`${apiFailure||'GitHub APIから最新CSVを特定できません。'} ${manifestFailure} リポジトリのpc_data/にCSVがあり、GitHub Pagesから取得できることを確認してください。`);throw new Error(`共有PCカタログを特定できません。${manifestFailure} index.htmlと同階層のpc_data/を確認してください。`)}
-    async function loadSharedCatalog(){try{const base=`${staffCatalogBasePath()}pc_data/`;const filename=await latestStaffCatalogFilename(base);const csvUrl=`${base}${encodeURIComponent(filename)}`;const response=await fetch(csvUrl,{cache:'no-store'});if(!response.ok)throw new Error(`最新PCカタログCSV ${filename} を取得できません（HTTP ${response.status}）。`);state.products=parseCatalogText(await response.text());state.ready=true;state.sourceName=filename;renderCatalog();setStatus('catalog-status',`${state.sourceName}（最新版）を読み込みました。機種 ${state.products.length} 件`,true);if(state.vector)renderStaffRecommendations(state.vector)}catch(error){setStatus('catalog-status',`共有カタログを読み込めません：${error.message}`,false);renderCatalog()}}
-    async function loadCatalog(file){try{const products=parseCatalogText(await file.text());state.products=products;state.ready=true;state.sourceName=file.name;state.editIndex=-1;renderCatalog();setStatus('catalog-status',`${products.length}件を読み込みました。CSVはこの端末内で編集します。`,true);if(state.vector)renderStaffRecommendations(state.vector)}catch(e){setStatus('catalog-status',e.message,false)}}
-    function renderCatalog(){const list=$('product-list');$('catalog-summary').textContent=state.ready?`${state.sourceName||'新規CSV'} · ${state.products.length}機種`: '共有CSVを読込中';$('download-summary').textContent=state.ready?`${state.products.length}機種をCSVに出力`: 'CSVを準備するとダウンロードできます';$('download-csv').disabled=!state.ready;if(!state.ready){list.innerHTML='<div class="empty-list">共有カタログを確認できません。</div>';return}if(!state.products.length){list.innerHTML='<div class="empty-list">カタログに商品行がありません。実商品CSVを pc_data/ に追加すると推薦が表示されます。</div>';return}list.innerHTML=state.products.map((p,i)=>`<article class="product-card"><div class="product-head"><div><p class="product-name">${esc(p.model)}</p><span class="product-meta">JAN ${esc(p.jan)} · ${i+1}行目</span></div><div class="product-actions"><button class="btn btn-soft btn-small" type="button" data-action="edit-product" data-index="${i}">訂正</button><button class="btn btn-danger btn-small" type="button" data-action="delete-product" data-index="${i}">削除</button></div></div>${p.highlights?`<p class="product-highlight">${esc(p.highlights)}</p>`:''}<div class="product-vector">${p.vector.map((v,j)=>`<span class="mini-spec"><small>${esc(FIELDS[j].label)}</small><strong>${esc(fmt(j,v))}</strong></span>`).join('')}</div></article>`).join('');if(state.vector)renderStaffRecommendations(state.vector)}
-    function renderStaffRecommendations(vector){const mount=$('staff-recommendations');if(!mount)return;if(!state.ready){mount.innerHTML='<div class="empty-list">共有カタログを読み込んでいます。</div>';return}const ranked=rankProducts(vector,state.products,5);if(!ranked.length){mount.innerHTML='<div class="empty-list">有効な商品データがありません。pc_data/ に実商品CSVを追加してください。</div>';return}mount.innerHTML=ranked.map((p,i)=>`<article class="staff-rec-card"><div class="staff-rec-header"><div><span class="value-chip">${i+1}位</span> <strong class="staff-rec-score">一致度 ${p.match.toFixed(1)}%</strong></div><h3>${esc(p.model)}</h3>${p.highlights?`<p class="staff-rec-highlight">${esc(p.highlights)}</p>`:''}</div><div class="staff-rec-specs">${p.vector.map((v,j)=>`<span class="mini-spec"><small>${esc(FIELDS[j].label)}</small><strong>${esc(fmt(j,v))}</strong></span>`).join('')}</div><div class="staff-rec-footer">${barcodeSvg(p.jan)}<div class="jan-copy-group"><code>${esc(p.jan)}</code><button class="btn btn-soft btn-small" type="button" data-action="copy-jan" data-jan="${esc(p.jan)}">JANをコピー</button></div></div></article>`).join('')}
+    function sameJanExists(jan,exceptIndex=-1){return state.products.some((product,index)=>index!==exceptIndex&&product.jan===jan)}
+    async function loadSharedCatalog(){
+      state.loadError='';setStatus('catalog-status','Firebase FirestoreからPCカタログを読み込んでいます…',true);
+      try{
+        const firebase=await window.PcFirebaseReady,products=await firebase.list();
+        state.products=products.map(product=>({...product,vector:validateVector(product.vector)}));
+        state.baselineProducts=state.products.map(product=>({...product,vector:[...product.vector]}));
+        state.ready=true;state.hasChanges=false;state.sourceName='Firebase Firestore';state.editIndex=-1;
+        renderCatalog();setStatus('catalog-status',`Firestoreから${state.products.length}機種を読み込みました。`,true);
+        if(state.vector)renderStaffRecommendations(state.vector);
+      }catch(error){state.ready=false;state.loadError=error.message||String(error);setStatus('catalog-status',`FirebaseのPCカタログを読み込めません：${state.loadError}`,false);renderCatalog()}
+    }
+    function renderCatalog(){
+      const list=$('product-list');
+      $('catalog-summary').textContent=state.ready?`Firebase Firestore · ${state.products.length}機種${state.hasChanges?' · 未反映の変更あり':''}`:state.loadError?'Firestore接続エラー':'Firestore接続中…';
+      $('download-summary').textContent=state.ready?`${state.products.length}機種をCSVバックアップに出力`:state.loadError?'Firestoreから読み込むとダウンロードできます':'Firestoreカタログを読み込んでいます';
+      $('download-csv').disabled=!state.ready;
+      $('open-form-button').disabled=!state.ready||!state.authUser;
+      $('reflect-changes').disabled=!state.ready||!state.authUser||!state.hasChanges;
+      $('reflect-changes').textContent=state.authUser?(state.hasChanges?'変更を反映':'変更なし'):'ログイン後に変更を反映';
+      if(!state.ready){list.innerHTML=`<div class="empty-list">${esc(state.loadError||'Firestoreカタログを読み込んでいます。')}</div>`;renderStaffRecommendations(state.vector||[]);return}
+      if(!state.products.length){list.innerHTML='<div class="empty-list">Firestoreのpc_catalogは空です。スタッフログイン後に「PC登録」から機種を追加してください。</div>';renderStaffRecommendations(state.vector||[]);return}
+      list.innerHTML=state.products.map((p,i)=>`<article class="product-card"><div class="product-head"><div><p class="product-name">${esc(p.model)}</p><span class="product-meta">JAN ${esc(p.jan)} · ${i+1}件目</span></div><div class="product-actions">${state.authUser?`<button class="btn btn-soft btn-small" type="button" data-action="edit-product" data-index="${i}">訂正</button><button class="btn btn-danger btn-small" type="button" data-action="delete-product" data-index="${i}">削除</button>`:'<span class="file-summary">訂正・削除にはスタッフログインが必要</span>'}</div></div>${p.highlights?`<p class="product-highlight">${esc(p.highlights)}</p>`:''}<div class="product-vector">${p.vector.map((v,j)=>`<span class="mini-spec"><small>${esc(FIELDS[j].label)}</small><strong>${esc(fmt(j,v))}</strong></span>`).join('')}</div></article>`).join('');
+      if(state.vector)renderStaffRecommendations(state.vector);
+    }
+    function renderAuth(user){
+      state.authUser=user||null;
+      $('staff-login-form').hidden=Boolean(user);$('staff-authenticated').hidden=!user;
+      $('staff-identity').textContent=user?`${user.email||user.uid} でログイン中`:'';
+      $('staff-login-button').disabled=false;
+      $('open-form-button').disabled=!state.ready||!state.authUser;
+      if(user)setStatus('auth-status','スタッフとしてログインしました。Firestoreルールで許可されたアカウントのみ保存できます。',true);
+      renderCatalog();
+    }
+    async function watchStaffAuth(){try{const firebase=await window.PcFirebaseReady;firebase.onAuthChanged(renderAuth)}catch(error){setStatus('auth-status',error.message||String(error),false)}}
+    async function reflectChanges(){
+      if(!state.ready){setStatus('catalog-status','先にFirestoreからカタログを読み込んでください。',false);return}
+      if(!state.authUser){setStatus('auth-status','Firestoreへ変更を反映するにはスタッフログインが必要です。',false);return}
+      if(!state.hasChanges){setStatus('catalog-status','Firestoreへ反映する変更はありません。',true);return}
+      const baselineIds=new Set(state.baselineProducts.map(product=>product.docId));
+      const retainedIds=new Set(state.products.map(product=>product.docId).filter(Boolean));
+      const renamedIds=new Set(state.products.filter(product=>product.docId&&product.docId!==product.jan).map(product=>product.docId));
+      const deleteCount=[...baselineIds].filter(id=>!retainedIds.has(id)||renamedIds.has(id)).length;
+      if(deleteCount&&!window.confirm(`Firestoreから${deleteCount}機種を削除します。この削除を反映してよろしいですか？`))return;
+      const button=$('reflect-changes');button.disabled=true;button.textContent='反映中…';
+      try{
+        const firebase=await window.PcFirebaseReady;
+        const outcome=await firebase.replaceCatalog(state.products,state.baselineProducts);
+        state.products=state.products.map(product=>({...product,docId:product.jan,vector:[...product.vector]}));
+        state.baselineProducts=state.products.map(product=>({...product,vector:[...product.vector]}));
+        state.hasChanges=false;state.ready=true;state.sourceName='Firebase Firestore';
+        try{
+          const latest=await firebase.list();
+          state.products=latest.map(product=>({...product,vector:validateVector(product.vector)}));
+          state.baselineProducts=state.products.map(product=>({...product,vector:[...product.vector]}));
+        }catch(refreshError){renderCatalog();setStatus('catalog-status',`変更はFirestoreに保存済みですが、一覧を再読込できませんでした：${refreshError.message||String(refreshError)}`,false);return}
+        renderCatalog();
+        setStatus('catalog-status',`Firebaseに変更を反映しました（登録・更新 ${outcome.saved} 件、削除 ${outcome.deleted} 件）。`,true);
+        if(state.vector)renderStaffRecommendations(state.vector);
+      }catch(error){const message=error.message||String(error);setStatus('catalog-status',message,false);renderCatalog()}
+    }
+    async function handleStaffProductSubmit(event){
+      event.preventDefault();
+      if(!state.ready){setStatus('catalog-status','Firestoreカタログを読み込めません。接続状態を確認してください。',false);return}
+      if(!state.authUser){setStatus('auth-status','商品情報を登録するにはスタッフログインが必要です。',false);return}
+      try{
+        const model=$('model').value.trim(),jan=$('jan').value.trim(),highlights=$('highlights').value.trim();
+        if(!model)throw new Error('型番を入力してください。');
+        if(!validJan(jan))throw new Error('JANコードはチェックデジットが正しい8桁または13桁で入力してください。');
+        if(highlights.length>500)throw new Error('魅力紹介は500文字以内です。');
+        const vector=validateVector(FIELDS.map(f=>$('f-'+f.key).value));
+        if(vector[10]!==0&&(vector[10]&(vector[10]-1))!==0)throw new Error('PCカタログのメーカーは0または単一メーカーにしてください。');
+        if(sameJanExists(jan,state.editIndex))throw new Error(`JANコード ${jan} はすでに登録済みです。重複登録はできません。`);
+        const current=state.editIndex>=0?state.products[state.editIndex]:null;
+        if(!current||current.jan!==jan){const firebase=await window.PcFirebaseReady;if(await firebase.hasJan(jan))throw new Error(`JANコード ${jan} はすでにFirebaseに登録済みです。重複登録はできません。`)}
+        const product={model,jan,vector,highlights,docId:current?.docId||''};
+        if(state.editIndex>=0){state.products[state.editIndex]=product;setStatus('catalog-status','機種情報を訂正しました。Firestoreへ反映するには「変更を反映」を押してください。',true)}
+        else{state.products.push(product);setStatus('catalog-status','機種を追加しました。Firestoreへ反映するには「変更を反映」を押してください。',true)}
+        state.hasChanges=true;closeForm();renderCatalog();
+      }catch(error){setStatus('catalog-status',error.message||String(error),false)}
+    }
+        function renderStaffRecommendations(vector){const mount=$('staff-recommendations');if(!mount)return;if(!state.ready){mount.innerHTML='<div class="empty-list">Firestoreカタログを読み込んでいます。</div>';return}const ranked=rankProducts(vector,state.products,5);if(!ranked.length){mount.innerHTML='<div class="empty-list">FirestoreのPCカタログに商品データがありません。</div>';return}mount.innerHTML=ranked.map((p,i)=>`<article class="staff-rec-card"><div class="staff-rec-header"><div><span class="value-chip">${i+1}位</span> <strong class="staff-rec-score">一致度 ${p.match.toFixed(1)}%</strong></div><h3>${esc(p.model)}</h3>${p.highlights?`<p class="staff-rec-highlight">${esc(p.highlights)}</p>`:''}</div><div class="staff-rec-specs">${p.vector.map((v,j)=>`<span class="mini-spec"><small>${esc(FIELDS[j].label)}</small><strong>${esc(fmt(j,v))}</strong></span>`).join('')}</div><div class="staff-rec-footer">${barcodeSvg(p.jan)}<div class="jan-copy-group"><code>${esc(p.jan)}</code><button class="btn btn-soft btn-small" type="button" data-action="copy-jan" data-jan="${esc(p.jan)}">JANをコピー</button></div></div></article>`).join('')}
     async function copyJan(jan){try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(jan);else{const temp=document.createElement('textarea');temp.value=jan;temp.style.position='fixed';temp.style.opacity='0';document.body.appendChild(temp);temp.select();const ok=document.execCommand('copy');temp.remove();if(!ok)throw new Error('コピーできませんでした。')}setStatus('catalog-status',`JAN ${jan} をコピーしました。`,true)}catch(error){setStatus('catalog-status',`JANをコピーできません：${error.message}`,false)}}
-    function openForm(index=-1){if(!state.ready){setStatus('catalog-status','共有CSVを読み込むか「新規CSVを作成」してください。',false);return}state.editIndex=index;$('form-title').textContent=index>=0?'PC情報を訂正':'新しいPCを登録';$('save-product').textContent=index>=0?'変更を反映':'CSVに追加';const p=index>=0?state.products[index]:null;$('product-form').reset();if(p){$('model').value=p.model;$('jan').value=p.jan;$('highlights').value=p.highlights||'';FIELDS.forEach((f,i)=>{const el=$('f-'+f.key);el.value=f.key==='aspectRatio'?Number(p.vector[i]).toFixed(6):String(p.vector[i])})}else{$('f-aspectRatio').value='1.600000';$('f-manufacturerMask').value='0';$('f-failureFrequency').value='0'}$('product-form-wrap').hidden=false;$('product-form-wrap').scrollIntoView({behavior:'smooth',block:'center'});setStatus('catalog-status','',true)}
+    function openForm(index=-1){if(!state.ready){setStatus('catalog-status','Firestoreカタログを読み込めません。',false);return}if(!state.authUser){setStatus('auth-status','PC登録・訂正にはスタッフログインが必要です。',false);return}state.editIndex=index;$('form-title').textContent=index>=0?'PC情報を訂正':'新しいPCを登録';$('save-product').textContent=index>=0?'訂正内容を保存':'新規機種を追加';const p=index>=0?state.products[index]:null;$('product-form').reset();if(p){$('model').value=p.model;$('jan').value=p.jan;$('highlights').value=p.highlights||'';FIELDS.forEach((f,i)=>{const el=$('f-'+f.key);el.value=f.key==='aspectRatio'?Number(p.vector[i]).toFixed(6):String(p.vector[i])})}else{$('f-aspectRatio').value='1.600000';$('f-manufacturerMask').value='0';$('f-failureFrequency').value='0'}$('product-form-wrap').hidden=false;$('product-form-wrap').scrollIntoView({behavior:'smooth',block:'center'});setStatus('catalog-status','',true)}
     function closeForm(){ $('product-form-wrap').hidden=true;$('product-form').reset();state.editIndex=-1 }
-    $('product-form').addEventListener('submit',event=>{event.preventDefault();if(!state.ready){setStatus('catalog-status','共有CSVを読み込むか新規作成してください。',false);return}try{const model=$('model').value.trim(),jan=$('jan').value.trim(),highlights=$('highlights').value.trim();if(!model)throw new Error('型番を入力してください。');if(!validJan(jan))throw new Error('JANコードはチェックデジットが正しい8桁または13桁で入力してください。');if(highlights.length>500)throw new Error('魅力紹介は500文字以内です。');const vector=validateVector(FIELDS.map(f=>$('f-'+f.key).value));if(vector[10]!==0&&(vector[10]&(vector[10]-1))!==0)throw new Error('PCカタログのメーカーは0または単一メーカーにしてください。');const product={model,jan,vector,highlights};if(state.editIndex>=0){state.products[state.editIndex]=product;setStatus('catalog-status','機種情報を訂正しました。共有Gitフォルダは直接変更しません。CSVをダウンロードし、pc_data/ に追加してください。',true)}else{state.products.push(product);setStatus('catalog-status','機種を追加しました。CSVを書き出して pc_data/ に追加してください。',true)}closeForm();renderCatalog()}catch(e){setStatus('catalog-status',e.message,false)}});
+    $('product-form').addEventListener('submit',handleStaffProductSubmit);
     function downloadCsv(){if(!state.ready)return;const blob=new Blob(['\uFEFF',serializeCsv(state.products)],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a'),d=new Date(),name=`pc_data_${d.getFullYear()}_${pad(d.getMonth()+1)}_${pad(d.getDate())}_${pad(d.getHours())}_${pad(d.getMinutes())}_${pad(d.getSeconds())}.csv`;a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);setStatus('catalog-status',`${name} をダウンロードしました。`,true)}
-    document.addEventListener('click',event=>{const btn=event.target.closest('[data-action]');if(!btn)return;const action=btn.dataset.action;if(action==='scan-qr')startCamera('qr');if(action==='scan-jan')startCamera('jan');if(action==='read-paste')acceptQr($('qr-paste').value);if(action==='close-scanner'){stopCamera();$('scanner-dialog').close()}if(action==='new-csv'){state.products=[];state.ready=true;state.sourceName='新規CSV';state.editIndex=-1;closeForm();renderCatalog();setStatus('catalog-status','空のPCカタログを作成しました。型番・JAN・14項目を追加できます。',true);$('catalog-card').scrollIntoView({behavior:'smooth',block:'start'})}if(action==='open-form')openForm();if(action==='close-form'||action==='cancel-form')closeForm();if(action==='download-csv')downloadCsv();if(action==='edit-product')openForm(Number(btn.dataset.index));if(action==='delete-product'){const i=Number(btn.dataset.index);if(Number.isInteger(i)&&state.products[i]){state.products.splice(i,1);renderCatalog();setStatus('catalog-status','機種を削除しました。変更を反映したCSVをダウンロードしてください。',true)}}if(action==='copy-jan')copyJan(btn.dataset.jan||'');});
-    document.addEventListener('change',event=>{if(event.target.id==='qr-image'&&event.target.files?.[0])decodeQrImage(event.target.files[0]);if(event.target.id==='catalog-file'&&event.target.files?.[0])loadCatalog(event.target.files[0])});
+    document.addEventListener('click',event=>{const btn=event.target.closest('[data-action]');if(!btn)return;const action=btn.dataset.action;if(action==='scan-qr')startCamera('qr');if(action==='scan-jan')startCamera('jan');if(action==='read-paste')acceptQr($('qr-paste').value);if(action==='close-scanner'){stopCamera();$('scanner-dialog').close()}if(action==='open-form')openForm();if(action==='close-form'||action==='cancel-form')closeForm();if(action==='download-csv')downloadCsv();if(action==='reload-catalog'){if(state.hasChanges&&!window.confirm('Firestoreへ未反映の変更があります。破棄して再読み込みしますか？'))return;loadSharedCatalog()}if(action==='reflect-changes')reflectChanges();if(action==='edit-product')openForm(Number(btn.dataset.index));if(action==='delete-product'){const i=Number(btn.dataset.index);if(Number.isInteger(i)&&state.products[i]&&state.authUser){state.products.splice(i,1);state.hasChanges=true;renderCatalog();setStatus('catalog-status','機種を削除予定にしました。Firestoreへ反映するには「変更を反映」を押してください。',true)}}if(action==='copy-jan')copyJan(btn.dataset.jan||'');});
+    $('staff-login-form').addEventListener('submit',async event=>{event.preventDefault();const button=$('staff-login-button');button.disabled=true;setStatus('auth-status','ログインしています…',true);try{const firebase=await window.PcFirebaseReady;await firebase.signIn($('staff-email').value.trim(),$('staff-password').value);$('staff-password').value='';setStatus('auth-status','ログインしました。',true)}catch(error){setStatus('auth-status',error.message||String(error),false)}finally{button.disabled=false}});
+    $('staff-logout').addEventListener('click',async()=>{try{const firebase=await window.PcFirebaseReady;await firebase.signOut();setStatus('auth-status','ログアウトしました。',true)}catch(error){setStatus('auth-status',error.message||String(error),false)}});
+    document.addEventListener('change',event=>{if(event.target.id==='qr-image'&&event.target.files?.[0])decodeQrImage(event.target.files[0])});
     renderCatalog();
     loadSharedCatalog();
+    watchStaffAuth();
   })();
   </script>
 </body>
