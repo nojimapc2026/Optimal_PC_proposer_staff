@@ -29,8 +29,8 @@
     <div class="page">
       <section class="intro"><span class="eyebrow"><i class="dot"></i>STAFF WORKSPACE</span><h1>相談QRを読み取り、<br>次の一台をカタログへ。</h1><p>QRの数値ベクトルを仕様一覧に変換し、PCカタログをFirebase Firestoreで共有管理します。</p></section>
       <section class="card" id="scanner-card">
-        <div class="card-head"><div class="card-title"><span class="step-icon" aria-hidden="true">▦</span><div><h2>相談QRを読み取る</h2><p>カメラ、QR画像、または数値文字列から14スペックと15回答を解析</p></div></div><span class="card-badge">STEP 01</span></div>
-        <div class="scan-grid"><div class="scan-controls"><div class="action-row"><button class="btn btn-primary" type="button" data-action="scan-qr">▦ カメラでQRを読む</button><label class="btn btn-soft">画像を選択<input class="hidden-input" type="file" id="qr-image" accept="image/*"></label></div><textarea id="qr-paste" class="paste-area" placeholder="version 2/3の30数値CSVを貼り付ける場合"></textarea><div class="action-row" style="margin-top:8px"><button class="btn btn-plain btn-small" type="button" data-action="read-paste">CSVを解析</button></div><p class="hint">QRはURLや文章を含まない数値30項目（version 2/3の版・14スペック・15回答コード）です。</p><div id="scan-status" class="status" role="status"></div></div><div class="scanner-stage" id="scanner-placeholder"><div><span class="scan-symbol" aria-hidden="true">⌗</span><p>読み取り待機中</p><small>カメラを起動するとスキャン画面を表示します</small></div></div></div>
+        <div class="card-head"><div class="card-title"><span class="step-icon" aria-hidden="true">▦</span><div><h2>相談QRを読み取る</h2><p>カメラ、QR画像、または数値文字列から14スペックと15回答を解析</p></div><span class="card-badge">STEP 01</span></div>
+        <div class="scan-grid"><div class="scan-controls"><div class="action-row"><button class="btn btn-primary" type="button" data-action="scan-qr">▦ カメラでQRを読む</button><label class="btn btn-soft">画像を選択<input class="hidden-input" type="file" id="qr-image" accept="image/*"></label></div><textarea id="qr-paste" class="paste-area" placeholder="version 2/3/4/5の30数値CSVを貼り付ける場合"></textarea><div class="action-row" style="margin-top:8px"><button class="btn btn-plain btn-small" type="button" data-action="read-paste">CSVを解析</button></div><p class="hint">QRはURLや文章を含まない数値30項目（version 2/3/4/5の版・14スペック・15回答コード）です。</p><div id="scan-status" class="status" role="status"></div></div><div class="scanner-stage" id="scanner-placeholder"><div><span class="scan-symbol" aria-hidden="true">⌗</span><p>読み取り待機中</p><small>カメラを起動するとスキャン画面を表示します</small></div></div></div>
       </section>
       <section id="scan-results" class="result-stack" hidden>
         <section class="result-card"><h2>必要なスペックの目安</h2><p class="section-lead">スキャンした14列ベクトルの値です。</p><div id="spec-results" class="spec-table"></div></section>
@@ -46,7 +46,7 @@
           <div id="staff-authenticated" hidden><span class="file-summary" id="staff-identity"></span> <button class="btn btn-plain btn-small" type="button" id="staff-logout">ログアウト</button></div><div id="auth-status" class="status" role="status"></div>
         </section>
         <div class="catalog-actions" style="margin-top:14px"><span class="file-summary" id="catalog-summary">Firestore接続中…</span><div class="action-row"><button class="btn btn-soft" type="button" data-action="reload-catalog">再読み込み</button><button class="btn btn-primary" id="reflect-changes" type="button" data-action="reflect-changes" disabled>変更を反映</button></div></div>
-        <div class="catalog-help"><strong>保存先：</strong><code>Cloud Firestore / pc_catalog</code><br><strong>レコード項目：</strong><code>model,jan,cpuSingle,cpuMulti,npuCores,gpu,ramGB,ssdGB,weightG,design,displayInch,aspectRatio,manufacturerMask,failureFrequency,readability,positioning,highlights</code><br>CSVと同じ17列の対応・値を保存し、JANは文字列でドキュメントIDにも使います。入力・訂正・削除は端末内に一時反映し、「変更を反映」でFirestoreへ保存します。CSVはバックアップ用に書き出せますが、カタログ読込元には使いません。</div>
+        <div class="catalog-help"><strong>保存先：</strong><code>Cloud Firestore / pc_catalog</code><br><strong>レコード項目：</strong><code>model,jan,cpuSingle,cpuMulti,npuTOPS,gpu,ramGB,ssdGB,weightG,design,displayInch,aspectRatio,manufacturerMask,failureFrequency,readability,positioning,highlights</code><br>CSVと同じ17列の対応・値を保存し、JANは文字列でドキュメントIDにも使います。入力・訂正・削除は端末内に一時反映し、「変更を反映」でFirestoreへ保存します。CSVはバックアップ用に書き出せますが、カタログ読込元には使いません。</div>
         <div id="catalog-status" class="status" role="status"></div><div id="product-list" class="product-list"><div class="empty-list">Firebase Firestoreからカタログを読み込んでいます。</div></div>
         <div class="download-row"><span class="file-summary" id="download-summary">Firestoreカタログを読み込んでいます</span><button class="btn btn-primary" id="download-csv" type="button" data-action="download-csv" disabled>バックアップCSVをダウンロード</button></div>
         <section class="form-wrap" id="product-form-wrap" hidden>
@@ -90,9 +90,8 @@
       const app = appSdk.initializeApp(firebaseConfig,'pc-concierge-catalog');
       const database = firestoreSdk.getFirestore(app);
       const auth = authSdk.getAuth(app);
-      const catalogRef = firestoreSdk.collection(database,'pc_catalog');
-    const catalogCollectionName = 'pc_catalog';
-    const fieldKeys = ['cpuSingle','cpuMulti','npuCores','gpu','ramGB','ssdGB','weightG','design','displayInch','aspectRatio','manufacturerMask','failureFrequency','readability','positioning'];
+          const catalogCollectionName = 'pc_catalog';
+    const fieldKeys = ['cpuSingle','cpuMulti','npuTOPS','gpu','ramGB','ssdGB','weightG','design','displayInch','aspectRatio','manufacturerMask','failureFrequency','readability','positioning'];
     const withFirestoreTimeout = promise => new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>{const error=new Error('Firestoreからサーバー応答がありません。Cloud Firestore APIと(default)データベースの有効状態を確認してください。');error.code='read-timeout';reject(error)},12000);
       Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});
@@ -118,22 +117,34 @@
       ...Object.fromEntries(fieldKeys.map((key,index)=>[key,Number(product.vector[index])])),
       highlights: String(product.highlights ?? '')
     });
-    const productFromDocument = snapshot => {
-      const data = snapshot.data();
-      if (!data || typeof data.model !== 'string' || !data.model.trim()) throw new Error(`Firestoreの ${snapshot.id} に型番がありません。`);
-      if (typeof data.jan !== 'string' || data.jan !== snapshot.id) throw new Error(`Firestoreの ${snapshot.id} はJANを文字列で保存し、ドキュメントIDと一致させてください。`);
-      const vector = fieldKeys.map(key => Number(data[key]));
-      if (vector.some(value => !Number.isFinite(value))) throw new Error(`Firestoreの ${snapshot.id} は14項目のベクトルが不足または不正です。`);
-      if (Object.keys(data).some(key => !['model','jan',...fieldKeys,'highlights'].includes(key))) throw new Error(`Firestoreの ${snapshot.id} にCSV仕様外の項目があります。`);
-      return {model:data.model,jan:data.jan,vector,highlights:String(data.highlights ?? ''),docId:snapshot.id};
+    const dataKeys=['model','jan',...fieldKeys,'highlights'];
+    const allowedFirestoreKeys=[...dataKeys,'npuCores'];
+    const normalizeFirestoreRecord=(data,id='')=>{
+      if(!data||typeof data.model!=='string'||!data.model.trim())throw new Error(`Firestoreの ${id} に型番がありません。`);
+      if(typeof data.jan!=='string'||(id&&data.jan!==id))throw new Error(`Firestoreの ${id} はJANを文字列で保存し、ドキュメントIDと一致させてください。`);
+      if(data.npuTOPS!==undefined&&data.npuCores!==undefined&&Number(data.npuTOPS)!==Number(data.npuCores))throw new Error(`Firestoreの ${id} で旧npuCoresとnpuTOPSが一致しません。`);
+      if(Object.keys(data).some(key=>!allowedFirestoreKeys.includes(key)))throw new Error(`Firestoreの ${id} にCSV仕様外の項目があります。`);
+      const record={model:data.model.trim(),jan:data.jan,...Object.fromEntries(fieldKeys.map(key=>[key,Number(key==='npuTOPS'?(data.npuTOPS??data.npuCores):data[key])])),highlights:String(data.highlights??'')};
+      if(fieldKeys.some(key=>!Number.isFinite(record[key])))throw new Error(`Firestoreの ${id} は14項目のベクトルが不足または不正です。`);
+      return record;
     };
-    const readCatalog = async () => {
-      try {
-        const snapshot = await withFirestoreTimeout(firestoreSdk.getDocsFromServer(firestoreSdk.collection(database,catalogCollectionName)));
+    const sameCatalogRecord=(a,b)=>dataKeys.every(key=>String(a?.[key]??'')===String(b?.[key]??''));
+    const hasValidJanCheckDigit=jan=>{
+      if(!/^\d{8}$|^\d{13}$/.test(String(jan)))return false;
+      const digits=[...String(jan)].map(Number),check=digits.pop();
+      const sum=digits.reverse().reduce((total,digit,index)=>total+digit*(index%2===0?3:1),0);
+      return (10-sum%10)%10===check;
+    };
+    const productFromDocument=snapshot=>{
+      const record=normalizeFirestoreRecord(snapshot.data(),snapshot.id);
+      return {model:record.model,jan:record.jan,vector:fieldKeys.map(key=>record[key]),highlights:record.highlights,docId:snapshot.id};
+    };
+    const readCatalog=async()=>{
+      try{
+        const snapshot=await withFirestoreTimeout(firestoreSdk.getDocsFromServer(firestoreSdk.collection(database,catalogCollectionName)));
         return snapshot.docs.map(productFromDocument).sort((a,b)=>a.model.localeCompare(b.model,'ja')||a.jan.localeCompare(b.jan,'en'));
-      } catch (error) { throw databaseMessage(error); }
+      }catch(error){throw databaseMessage(error)}
     };
-
       const api = Object.freeze({
         list: readCatalog,
         async hasJan(jan) { try { return (await withFirestoreTimeout(firestoreSdk.getDocFromServer(firestoreSdk.doc(database,'pc_catalog',String(jan))))).exists(); } catch (error) { throw databaseMessage(error); } },
@@ -142,49 +153,56 @@
         onAuthChanged(callback) { return authSdk.onAuthStateChanged(auth,callback); },
         friendlyError: databaseMessage,
         async replaceCatalog(products,baseline) {
-          const wanted = new Set();
-          const payloads = products.map(product=>{
+          const wanted=new Set();
+          const payloads=products.map(product=>{
             const payload=productData(product);
-            if (!payload.model) throw new Error('型番を入力してください。');
-            if (!/^\d{8}$|^\d{13}$/.test(payload.jan)) throw new Error('JANコードは8桁または13桁の数字文字列が必要です。');
-            if (wanted.has(payload.jan)) { const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。`); duplicate.code='duplicate-jan'; throw duplicate; }
-            wanted.add(payload.jan);
-            return {product,payload};
+            if(!payload.model)throw new Error('型番を入力してください。');
+            if(!hasValidJanCheckDigit(payload.jan))throw new Error('JANコードはチェックデジットが正しい8桁または13桁で入力してください。');
+            if(wanted.has(payload.jan)){const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`);duplicate.code='duplicate-jan';throw duplicate}
+            wanted.add(payload.jan);return {product,payload};
           });
-          try {
+          try{
+            const latest=await withFirestoreTimeout(firestoreSdk.getDocsFromServer(firestoreSdk.collection(database,catalogCollectionName)));
+            const current=new Map(latest.docs.map(snapshot=>[snapshot.id,normalizeFirestoreRecord(snapshot.data(),snapshot.id)]));
+            const expected=new Map((baseline||[]).map(product=>[String(product.docId||''),productData(product)]));
+            if(expected.has('')||current.size!==expected.size||[...current.keys()].some(id=>!expected.has(id))) {const conflict=new Error('Firestoreのカタログが別の操作で更新されています。再読み込みしてからやり直してください。');conflict.code='catalog-conflict';throw conflict}
+            for(const [id,expectedData] of expected){if(!sameCatalogRecord(current.get(id),expectedData)){const conflict=new Error('Firestoreのカタログが別の操作で更新されています。再読み込みしてからやり直してください。');conflict.code='catalog-conflict';throw conflict}}
+            const retainedSourceIds=new Set();
+            for(const {product,payload} of payloads){
+              const sourceId=String(product.docId||'');
+              if(sourceId&&(!expected.has(sourceId)||retainedSourceIds.has(sourceId))){const conflict=new Error('編集対象がFirestoreの読み込み時点と一致しません。再読み込みしてください。');conflict.code='catalog-conflict';throw conflict}
+              if(sourceId)retainedSourceIds.add(sourceId);
+              if(current.has(payload.jan)&&sourceId!==payload.jan){const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`);duplicate.code='duplicate-jan';throw duplicate}
+              if(!sourceId&&expected.has(payload.jan)){const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`);duplicate.code='duplicate-jan';throw duplicate}
+            }
+            const deletes=new Set([...expected.keys()].filter(id=>!retainedSourceIds.has(id)));
+            for(const {product,payload} of payloads){const sourceId=String(product.docId||'');if(sourceId&&sourceId!==payload.jan)deletes.add(sourceId)}
+            const changed=payloads.filter(({product,payload})=>{
+              const sourceId=String(product.docId||''),original=sourceId?expected.get(sourceId):null;
+              return !original||sourceId!==payload.jan||!sameCatalogRecord(payload,original);
+            });
+            if(changed.length+deletes.size>450)throw new Error('一度に反映する実変更数が上限（450件）を超えています。変更を分けて反映してください。');
+            const referenceIds=new Set([...expected.keys(),...payloads.map(({payload})=>payload.jan)]);
+            if(referenceIds.size>450)throw new Error('商品数がトランザクション検証上限を超えています。カタログを分けて管理者へご相談ください。');
+            if(!changed.length&&!deletes.size)return {saved:0,deleted:0};
             return await firestoreSdk.runTransaction(database,async transaction=>{
-              const currentSnapshot=await transaction.get(catalogRef);
-              const current=new Map(currentSnapshot.docs.map(snapshot=>[snapshot.id,snapshot.data()]));
-              for (const {product,payload} of payloads) {
-                const sourceId=String(product.docId||'');
-                if (current.has(payload.jan) && sourceId!==payload.jan) { const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`); duplicate.code='duplicate-jan'; throw duplicate; }
+              const pairs=await Promise.all([...referenceIds].map(async id=>[id,await transaction.get(firestoreSdk.doc(database,catalogCollectionName,id))]));
+              const snapshots=new Map(pairs);
+              for(const [id,expectedData] of expected){
+                const snapshot=snapshots.get(id);
+                if(!snapshot?.exists()||!sameCatalogRecord(normalizeFirestoreRecord(snapshot.data(),id),expectedData)){const conflict=new Error('Firestoreのカタログが保存直前に別の操作で更新されています。再読み込みしてください。');conflict.code='catalog-conflict';throw conflict}
               }
-              const expected=new Map((baseline||[]).map(product=>[String(product.docId),productData(product)]));
-              if (current.size!==expected.size || [...current.keys()].some(id=>!expected.has(id))) { const conflict=new Error('Firestoreのカタログが別の操作で更新されています。再読み込みしてからやり直してください。'); conflict.code='catalog-conflict'; throw conflict; }
-              for (const [id,expectedData] of expected) {
-                const actual=current.get(id);
-                if (!actual || ['model','jan',...fieldKeys,'highlights'].some(key=>String(actual[key]??'')!==String(expectedData[key]??''))) { const conflict=new Error('Firestoreのカタログが別の操作で更新されています。再読み込みしてからやり直してください。'); conflict.code='catalog-conflict'; throw conflict; }
+              for(const {product,payload} of payloads){
+                const sourceId=String(product.docId||''),target=snapshots.get(payload.jan);
+                if(target?.exists()&&sourceId!==payload.jan){const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`);duplicate.code='duplicate-jan';throw duplicate}
+                if(sourceId===payload.jan&&(!target?.exists()||!expected.has(sourceId))){const conflict=new Error('編集対象がFirestoreから見つかりません。再読み込みしてください。');conflict.code='catalog-conflict';throw conflict}
               }
-              for (const {product,payload} of payloads) {
-                const sourceId=String(product.docId||'');
-                if (current.has(payload.jan) && sourceId!==payload.jan) { const duplicate=new Error(`JANコード ${payload.jan} はすでに登録済みです。重複登録はできません。`); duplicate.code='duplicate-jan'; throw duplicate; }
-                if (sourceId && !current.has(sourceId)) { const conflict=new Error('編集対象がFirestoreから見つかりません。再読み込みしてください。'); conflict.code='catalog-conflict'; throw conflict; }
-              }
-              const retainedSourceIds=new Set(payloads.map(({product})=>String(product.docId||'')).filter(Boolean));
-              const deletes=new Set([...current.keys()].filter(id=>!retainedSourceIds.has(id)));
-              for (const {product,payload} of payloads) { const sourceId=String(product.docId||''); if (sourceId && sourceId!==payload.jan) deletes.add(sourceId); }
-              const dataKeys=['model','jan',...fieldKeys,'highlights'];
-              const changed=payloads.filter(({payload})=>{
-                const actual=current.get(payload.jan);
-                return !actual||dataKeys.some(key=>String(actual[key]??'')!==String(payload[key]??''));
-              });
-              if (changed.length+deletes.size>450) throw new Error('一度に反映する実変更数が上限（450件）を超えています。変更を分けて反映してください。');
-              for (const {payload} of changed) transaction.set(firestoreSdk.doc(database,'pc_catalog',payload.jan),payload);
-              for (const id of deletes) transaction.delete(firestoreSdk.doc(database,'pc_catalog',id));
+              for(const {payload} of changed)transaction.set(firestoreSdk.doc(database,catalogCollectionName,payload.jan),payload);
+              for(const id of deletes)transaction.delete(firestoreSdk.doc(database,catalogCollectionName,id));
               return {saved:changed.length,deleted:deletes.size};
             });
-          } catch (error) {
-            if (error?.code==='duplicate-jan' || error?.code==='catalog-conflict') throw error;
+          }catch(error){
+            if(error?.code==='duplicate-jan'||error?.code==='catalog-conflict')throw error;
             throw databaseMessage(error);
           }
         }
@@ -212,7 +230,7 @@
     const FIELDS=[
       {key:'cpuSingle',label:'CPU single-core',unit:'Cinebench 2026 score',type:'number',min:0,step:1},
       {key:'cpuMulti',label:'CPU multi-core',unit:'Cinebench 2026 score',type:'number',min:0,step:1},
-      {key:'npuCores',label:'NPUコア数',unit:'非搭載は0',type:'number',min:0,step:1},
+      {key:'npuTOPS',label:'NPU性能（TOPS）',unit:'非搭載は0 TOPS。製品仕様値を入力',type:'number',min:0,max:200,step:1},
       {key:'gpu',label:'GPU',unit:'3DMark Steel Nomad score',type:'number',min:0,step:1},
       {key:'ramGB',label:'RAM',unit:'GB',type:'number',min:1,step:1},
       {key:'ssdGB',label:'SSD',unit:'GB',type:'number',min:1,step:1},
@@ -226,7 +244,7 @@
       {key:'positioning',label:'製品位置付け',unit:'1 entry / 10 high-end',type:'number',min:1,max:10,step:1}
     ];
     const MANUFACTURERS=['Apple','NEC','富士通（FMV）','dynabook','パナソニック（レッツノート）','VAIO','Microsoft（Surface）','ASUS','Lenovo','HP','Dell','MSI','Acer','マウスコンピューター','chromebook'];
-    const QR_SCHEMA_VERSION=4;
+    const QR_SCHEMA_VERSION=5;
     const QR_QUESTIONS=[
       {key:'purpose',title:'パソコンの主な用途',multi:true,optional:false,options:['仕事','勉強','趣味・娯楽'],codes:[1,2,4]},
       {key:'carry',title:'持ち運びの頻度',multi:false,options:['ほとんど持ち運びはしない','週1〜3日は持ち運びする','週4〜7日は持ち運びする'],codes:[1,2,3]},
@@ -248,7 +266,7 @@
     const HEADER=['model','jan',...FIELDS.map(f=>f.key),'highlights'];
     const LEGACY_HEADER=HEADER.slice(0,-1);
     const SPEC_LABELS=FIELDS.map(f=>f.label);
-    const state={vector:null,answers:null,protocolVersion:null,products:[],baselineProducts:[],ready:false,loadError:'',hasChanges:false,authUser:null,sourceName:'Firebase Firestore',editIndex:-1,cameraStream:null,cameraFrame:0,cameraMode:'qr',barcodeDetector:null,scanBusy:false,lastBarcodeScanAt:0};
+    const state={vector:null,answers:null,protocolVersion:null,products:[],baselineProducts:[],ready:false,loadError:'',hasChanges:false,authUser:null,sourceName:'Firebase Firestore',editIndex:-1,cameraStream:null,cameraFrame:0,cameraMode:'qr',barcodeDetector:null,scanBusy:false,lastBarcodeScanAt:0,zxingLoadPromise:null,zxingReader:null,zxingControls:null};
     const $=id=>document.getElementById(id);
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const pad=n=>String(n).padStart(2,'0');
@@ -257,7 +275,7 @@
     FIELDS.find(f=>f.key==='manufacturerMask').options=[['0','指定なし／不明'],...manufacturerOptions()];
     function makeFieldMarkup(f){const id='f-'+f.key;let control;if(f.type==='select')control=`<select class="select" id="${id}" name="${f.key}" required>${f.options.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>`;else control=`<input class="field" id="${id}" name="${f.key}" type="number" min="${f.min??0}" ${f.max?`max="${f.max}"`:''} step="${f.step||1}" required>`;return `<div class="field-wrap"><label class="field-label" for="${id}">${esc(f.label)} <span class="required">*</span></label>${control}<p class="field-note">${esc(f.unit)}</p></div>`}
     $('vector-fields').innerHTML=FIELDS.map(makeFieldMarkup).join('');
-    function validateVector(vector){if(!Array.isArray(vector)||vector.length!==14)throw new Error('ベクトルは14項目である必要があります。');const v=vector.map(Number);if(v.some(n=>!Number.isFinite(n)||n<0))throw new Error('ベクトルに不正な数値があります。');for(const i of [2,7,10,11,12,13])if(!Number.isInteger(v[i]))throw new Error(`${SPEC_LABELS[i]}は整数にしてください。`);if(v[2]>80)throw new Error('NPUの希望目安は0〜80コアです。');if(v[4]<=0||v[4]>1024||v[5]<=0||v[5]>1000000||v[6]<=0||v[6]>100000)throw new Error('RAM・SSD・重量を確認してください。');if(v[7]<1||v[7]>10)throw new Error('デザイン評価は1〜10の整数です。');if(![13.3,14,15.6,16].some(x=>Math.abs(v[8]-x)<.005))throw new Error('画面サイズは13.3、14、15.6、16のいずれかです。');if(!aspectOptions.some(x=>Math.abs(v[9]-Number(x))<.00001))throw new Error('画面比率は1.777778または1.600000です。');const wide=[13.3,15.6].some(x=>Math.abs(v[8]-x)<.005);if(wide!==(Math.abs(v[9]-1.777778)<.00001))throw new Error('画面サイズと画面比率の組合せが指定仕様と一致しません。');if(v[10]>32767)throw new Error('メーカーのビットマスクは0〜32767です。');if(![0,1].includes(v[11]))throw new Error('故障頻度は0または1です。');for(const i of [12,13])if(v[i]<1||v[i]>10)throw new Error(`${SPEC_LABELS[i]}は1〜10の整数です。`);return v}
+    function validateVector(vector){if(!Array.isArray(vector)||vector.length!==14)throw new Error('ベクトルは14項目である必要があります。');const v=vector.map(Number);if(v.some(n=>!Number.isFinite(n)||n<0))throw new Error('ベクトルに不正な数値があります。');for(const i of [2,7,10,11,12,13])if(!Number.isInteger(v[i]))throw new Error(`${SPEC_LABELS[i]}は整数にしてください。`);if(v[2]>200)throw new Error('NPU性能は0〜200 TOPSの範囲で入力してください。');if(v[4]<=0||v[4]>1024||v[5]<=0||v[5]>1000000||v[6]<=0||v[6]>100000)throw new Error('RAM・SSD・重量を確認してください。');if(v[7]<1||v[7]>10)throw new Error('デザイン評価は1〜10の整数です。');if(![13.3,14,15.6,16].some(x=>Math.abs(v[8]-x)<.005))throw new Error('画面サイズは13.3、14、15.6、16のいずれかです。');if(!aspectOptions.some(x=>Math.abs(v[9]-Number(x))<.00001))throw new Error('画面比率は1.777778または1.600000です。');const wide=[13.3,15.6].some(x=>Math.abs(v[8]-x)<.005);if(wide!==(Math.abs(v[9]-1.777778)<.00001))throw new Error('画面サイズと画面比率の組合せが指定仕様と一致しません。');if(v[10]>32767)throw new Error('メーカーのビットマスクは0〜32767です。');if(![0,1].includes(v[11]))throw new Error('故障頻度は0または1です。');for(const i of [12,13])if(v[i]<1||v[i]>10)throw new Error(`${SPEC_LABELS[i]}は1〜10の整数です。`);return v}
     function decodeAnswerCodes(codes){return QR_QUESTIONS.map((q,index)=>{const value=codes[index];if(!Number.isInteger(value)||value<0)throw new Error(`Q${index+1}の回答コードが不正です。`);if(q.multi){const max=2**q.options.length;if(value>=max||(!q.optional&&value===0))throw new Error(`Q${index+1}の複数選択コードが範囲外です。`);return value===0?['指定なし']:q.options.filter((_,i)=>(value&q.codes[i])!==0)}if(value<1||value>q.options.length)throw new Error(`Q${index+1}の選択肢コードが範囲外です。`);return q.options[q.codes.indexOf(value)]})}
     function recalibrateLegacyVector(vector){
       const singleDemand=Math.max(.2,Math.min(1,(Number(vector[0])-500)/1800));
@@ -271,6 +289,13 @@
       converted[3]=dGpu===0?0:Math.round(80+3000*dGpu);
       return converted;
     }
+    function npuTOPSFromAnswers(codes){
+      if(!Array.isArray(codes)||codes.length!==15)return 0;
+      const longUse=Number(codes[5])===3,taskMask=Number(codes[4])||0;
+      const computeNeed=longUse&&(taskMask&(32|256|2048))!==0?10:0;
+      const frequencyNeed=value=>Number(value)===3?20:Number(value)===2?10:0;
+      return Math.min(50,computeNeed+frequencyNeed(codes[8])+frequencyNeed(codes[10]));
+    }
     function parseQr(text){
       const raw=String(text||'').replace(/^\uFEFF/,'').trim();
       const lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
@@ -278,23 +303,25 @@
       const parts=lines[0].split(',');
       if(parts.some(x=>!/^[0-9]+(?:\.[0-9]{1,6})?$/.test(x)))throw new Error('QRは数値だけのカンマ区切りである必要があります。');
       const values=parts.map(Number);
-      if(values.length===14)return {version:1,vector:validateVector(values),answers:null};
-      if(values.length!==30||![2,3,QR_SCHEMA_VERSION].includes(values[0]))throw new Error(`QR形式が違います。旧14数値、version 2/3、または現行version ${QR_SCHEMA_VERSION} の30数値が必要です（検出：${values.length}列）。`);
-      const version=values[0];
-      let vector=validateVector(values.slice(1,15));
+      if(values.length===14){const legacy=values.map((value,index)=>index===2?0:value),vector=validateVector(recalibrateLegacyVector(legacy));return {version:1,vector,answers:null}}
+      if(values.length!==30||![2,3,4,QR_SCHEMA_VERSION].includes(values[0]))throw new Error(`QR形式が違います。旧14数値、version 2/3/4、または現行version ${QR_SCHEMA_VERSION} の30数値が必要です（検出：${values.length}列）。`);
+      const version=values[0],answerCodes=values.slice(15);
+      const sourceVector=values.slice(1,15);
+      let vector=validateVector(version<5?sourceVector.map((value,index)=>index===2?0:value):sourceVector);
       if(version===2||version===3)vector=validateVector(recalibrateLegacyVector(vector));
-      return {version,vector,answers:decodeAnswerCodes(values.slice(15))};
+      if(version<5)vector[2]=npuTOPSFromAnswers(answerCodes);
+      return {version,vector:validateVector(vector),answers:decodeAnswerCodes(answerCodes)};
     }
-    function fmt(i,v){switch(i){case 0:case 1:return `${Number(v).toLocaleString('ja-JP')} 点`;case 2:return v===0?'NPUの特別な希望なし':`${v} コア以上を希望目安`;case 3:return v===0?'0（高負荷GPU指定なし）':`${Number(v).toLocaleString('ja-JP')} 点`;case 4:case 5:return `${Number(v).toLocaleString('ja-JP')} GB`;case 6:return `${Number(v).toLocaleString('ja-JP')} g`;case 7:case 12:case 13:return `${v} / 10`;case 8:return `${v} inch`;case 9:return Math.abs(Number(v)-1.777778)<.00001?'16:9（1.777778）':'16:10（1.600000）';case 10:return makerNames(Number(v)).join('、');case 11:return v===0?'少ない（希望）':'多い（価格優先の希望）';default:return String(v)}}
+    function fmt(i,v){switch(i){case 0:case 1:return `${Number(v).toLocaleString('ja-JP')} 点`;case 2:return v===0?'NPUの特別な希望なし':`${v} TOPS以上を希望目安`;case 3:return v===0?'0（高負荷GPU指定なし）':`${Number(v).toLocaleString('ja-JP')} 点`;case 4:case 5:return `${Number(v).toLocaleString('ja-JP')} GB`;case 6:return `${Number(v).toLocaleString('ja-JP')} g`;case 7:case 12:case 13:return `${v} / 10`;case 8:return `${v} inch`;case 9:return Math.abs(Number(v)-1.777778)<.00001?'16:9（1.777778）':'16:10（1.600000）';case 10:return makerNames(Number(v)).join('、');case 11:return v===0?'少ない（希望）':'多い（価格優先の希望）';default:return String(v)}}
     function makerNames(mask){if(mask===0)return ['指定なし'];return MANUFACTURERS.filter((_,i)=>(mask&(2**i))!==0)}
     function showVector(decoded){const {vector,answers,version}=decoded;state.vector=vector;state.answers=answers;state.protocolVersion=version;$('spec-results').innerHTML=vector.map((v,i)=>`<div class="spec-cell"><span class="spec-label">${esc(FIELDS[i].label)}</span><span class="spec-value">${esc(fmt(i,v))}</span></div>`).join('');showNotes(vector,version,answers);showAnswers(answers,version);$('scan-results').hidden=false;renderStaffRecommendations(vector);$('scan-results').scrollIntoView({behavior:'smooth',block:'start'});setStatus('scan-status',version>=2?'14項目と15問の回答を読み取りました。':'旧14数値QRを読み取りました。選択回答は記録されていない形式です。',true)}
     function showNotes(v,version,answers){
-      const npuNote=version>=3?(v[2]===0?'NPUの特別な希望なし':`${v[2]}コア以上を目安（電源なし利用・静かな環境の頻度を反映）`):version===2?(v[2]===0?'旧version 2の計算値です。NPUの特別な希望はありません。':`旧version 2のNPU目安は${v[2]}コアです。Q9・Q11の回答は含みますが、当時はNPU要求に加算していません。`):'旧14数値QRには電源なし利用・静音頻度の回答コードがありません。';
+      const npuNote=version>=3?(v[2]===0?'NPUの特別な希望なし':`${v[2]} TOPS以上を目安（電源なし利用・静かな環境の頻度を反映）`):version===2?(v[2]===0?'旧version 2の計算値です。NPUの特別な希望はありません。':`旧version 2のNPU TOPS目安は${v[2]}です。Q9・Q11の回答コードから現行TOPS値を再計算しました。`):'旧14数値QRには質問回答がないため、NPU TOPS希望は0（指定なし）として扱います。';
       const warranty=version>=2&&answers?.[14]?String(answers[14]):'旧形式QRのため回答を復元できません';
       const readability=v[12]===5?'特にこだわりなし':v[12]===9?'見やすい方が良い':`評価目安 ${v[12]}/10`;
       const notes=[['NPUの優先目安',npuNote],['希望メーカー',makerNames(v[10]).join('、')],['価格・故障頻度',v[11]===0?'故障事例が少ない方を希望':'価格優先（故障事例が多い方）'],['画面サイズ・見やすさ',`${v[8]} inch・${readability}`],['デザイン重視',v[7]===3?'ほとんど重視しない':v[7]===6?'少し重視する':v[7]===9?'かなり重視する':`評価目安 ${v[7]}/10`],['保証の希望',warranty]];
       $('scan-notes').innerHTML=notes.map(([a,b])=>`<div class="note-box"><strong>${esc(a)}</strong><span>${esc(b)}</span></div>`).join('');
-      $('scan-warning').textContent=version===1?'旧14数値QRです。質問回答は含まれません。CPU/GPU換算は不明なため読み取った値をそのまま表示しています。':version===2?'旧version 2 QRです。質問回答を復元し、旧CPU/GPU要求値を現行スケールへ換算しました。NPUは旧算出規則です。':version===3?'旧version 3 QRです。質問回答とNPU値を保持し、旧CPU/GPU要求値を現行スケールへ換算しました。':'version 4は実機CSVに合わせた現行スケールです。Q9・Q11はNPU希望目安に反映します。実際の電池持ちやファン音は製品仕様・冷却設計も確認してください。';
+      $('scan-warning').textContent=version===1?'旧14数値QRです。質問回答は含まれないためNPU TOPS希望は0扱いです。CPU/GPU値は旧スケールから換算しました。':version===2?'旧version 2 QRです。質問回答を復元し、旧CPU/GPU要求値とNPU TOPS希望を現行スケールへ換算しました。':version===3?'旧version 3 QRです。質問回答からNPU TOPS希望を再計算し、旧CPU/GPU要求値を現行スケールへ換算しました。':'version 5はNPU TOPSスケールです。version 2〜4はQ9・Q11の回答から希望TOPSを再計算しました。実際の電池持ちやファン音は製品仕様・冷却設計も確認してください。';
     }
     function showAnswers(answers,version){$('answer-list').innerHTML=QR_QUESTIONS.map((q,i)=>{const value=version>=2?(Array.isArray(answers[i])?answers[i].join('、'):answers[i]):'旧形式QRのため回答コードなし';return `<div class="answer-row"><span class="question-number">Q${i+1}</span><span class="answer-q">${esc(q.title)}</span><span class="answer-value">${esc(value)}</span><span class="answer-status ${version>=2?'exact':''}">${version>=2?'QRから復元':'旧形式'}</span></div>`}).join('')}
     function setStatus(id,text,ok=false){const el=$(id);if(el){el.textContent=text;el.classList.toggle('ok',ok)}}
@@ -377,6 +404,45 @@
       }
       return null;
     }
+    function loadClassicScript(src){
+      return new Promise((resolve,reject)=>{
+        const script=document.createElement('script');script.src=src;script.async=true;script.crossOrigin='anonymous';
+        script.onload=()=>resolve();script.onerror=()=>reject(new Error('JAN読取ライブラリを読み込めません。ネットワーク/CDN接続を確認してください。'));
+        document.head.appendChild(script);
+      });
+    }
+    async function ensureZxing(){
+      if(window.ZXing?.DecodeHintType&&window.ZXingBrowser?.BrowserMultiFormatReader)return;
+      if(!state.zxingLoadPromise){
+        state.zxingLoadPromise=(async()=>{
+          await loadClassicScript('https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js');
+          await loadClassicScript('https://unpkg.com/@zxing/browser@0.2.1/umd/zxing-browser.min.js');
+          if(!window.ZXing?.DecodeHintType||!window.ZXingBrowser?.BrowserMultiFormatReader)throw new Error('JAN読取ライブラリを初期化できません。');
+        })().catch(error=>{state.zxingLoadPromise=null;throw error});
+      }
+      return state.zxingLoadPromise;
+    }
+    async function startZxingJanReader(video,dialog){
+      await ensureZxing();
+      const core=window.ZXing,hints=new Map();
+      hints.set(core.DecodeHintType.POSSIBLE_FORMATS,[core.BarcodeFormat.EAN_13,core.BarcodeFormat.EAN_8]);
+      hints.set(core.DecodeHintType.TRY_HARDER,true);
+      const reader=new window.ZXingBrowser.BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:180,delayBetweenScanSuccess:650});
+      state.zxingReader=reader;
+      const controls=await reader.decodeFromStream(state.cameraStream,video,(result,error)=>{
+        if(!dialog.open||!state.cameraStream)return;
+        if(result){
+          const jan=String(result.getText()||'').trim();
+          if(validJan(jan))completeJanScan(jan,dialog);
+          else $('camera-state').textContent='バーコードは検出しましたがJANのチェック桁が一致しません。全体を枠内に入れて再度お試しください。';
+        }else if(error&&!/NotFoundException|ChecksumException|FormatException/.test(String(error.name||''))){
+          $('camera-state').textContent='読取を継続しています。バーコード全体を枠内に入れ、ピントが合うまで静止してください。';
+        }
+      });
+      if(!dialog.open||!state.cameraStream){controls.stop();return false}
+      state.zxingControls=controls;state.cameraStream=video.srcObject||state.cameraStream;
+      return true;
+    }
     async function detectNativeJan(video){
       const detector=state.barcodeDetector;if(!detector)return null;
       let timer=0;
@@ -413,40 +479,45 @@
       stopCamera();state.cameraMode=mode;
       const dialog=$('scanner-dialog'),video=$('camera-video'),guide=$('barcode-guide');
       $('scanner-title').textContent=mode==='qr'?'相談QRをスキャン':'JANコードをスキャン';
-      $('camera-state').textContent=mode==='qr'?'カメラを準備しています…':'Safari互換JANスキャナーを準備しています…';
+      $('camera-state').textContent=mode==='qr'?'カメラを準備しています…':'EAN-13/JANを読み取る準備をしています…';
       if(guide)guide.hidden=mode!=='jan';
       if(!dialog.open)dialog.showModal();
       try{
         if(!navigator.mediaDevices?.getUserMedia)throw new Error('カメラにはHTTPSとSafariのサイトカメラ許可が必要です。許可できない場合はJANを手入力してください。');
-        try{state.cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});}
-        catch(error){if(['OverconstrainedError','ConstraintNotSatisfiedError'].includes(error?.name))state.cameraStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});else throw error;}
-        video.playsInline=true;video.muted=true;video.autoplay=true;video.srcObject=state.cameraStream;
-        await video.play();
+        const highResolution={video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false};
+        try{state.cameraStream=await navigator.mediaDevices.getUserMedia(highResolution)}
+        catch(error){
+          if(['OverconstrainedError','ConstraintNotSatisfiedError'].includes(error?.name)){
+            try{state.cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false})}
+            catch(secondError){if(['OverconstrainedError','ConstraintNotSatisfiedError'].includes(secondError?.name))state.cameraStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});else throw secondError}
+          }else throw error;
+        }
+        video.playsInline=true;video.muted=true;video.autoplay=true;video.srcObject=state.cameraStream;await video.play();
         if(mode==='jan'){
           try{
-            const Detector=window.BarcodeDetector;
-            if(Detector&&typeof Detector.getSupportedFormats==='function'){
-              const formats=await Detector.getSupportedFormats(),available=['ean_13','ean_8'].filter(format=>formats.includes(format));
-              if(available.length)state.barcodeDetector=new Detector({formats:available});
-            }
-          }catch{state.barcodeDetector=null;}
-          $('camera-state').textContent=state.barcodeDetector?'JANコードを枠内に横向きで映してください。':'Safari互換方式で読み取り中です。明るい場所でコードを横向きにしてください。';
+            const active=await startZxingJanReader(video,dialog);
+            if(!dialog.open||!state.cameraStream)return;
+            $('camera-state').textContent=active?'JANを高精度で読み取り中です。バーコード全体を枠内に横向きで入れ、ピントが合う距離で1〜2秒静止してください。':'互換読取方式で読み取り中です。バーコード全体を枠内に横向きで入れてください。';
+          }catch(error){
+            state.zxingControls=null;state.zxingReader=null;
+            $('camera-state').textContent=`高精度読取ライブラリを利用できないため代替方式で読取中です。${error.message||''} 明るい場所でJANを枠内に映してください。`;
+          }
         }else $('camera-state').textContent='相談QRをカメラに映してください。';
       }catch(error){
         stopCamera();const message=cameraErrorMessage(error);$('camera-state').textContent=message;setStatus('scan-status',message,false);return;
       }
       const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
-      if(!ctx){const message='カメラ画像を処理できません。JANを手入力してください。';$('camera-state').textContent=message;setStatus('scan-status',message,false);stopCamera();return;}
+      if(!ctx&&(mode==='qr'||!state.zxingControls)){const message='カメラ画像を処理できません。JANを手入力してください。';$('camera-state').textContent=message;setStatus('scan-status',message,false);stopCamera();return}
       const frame=async()=>{
         if(!state.cameraStream||!video.isConnected||!dialog.open)return;
-        if(video.readyState>=2&&video.videoWidth){
+        if(video.readyState>=2&&video.videoWidth&&ctx){
           try{
             if(mode==='qr'){
               const scale=Math.min(1,1000/video.videoWidth);canvas.width=Math.floor(video.videoWidth*scale);canvas.height=Math.floor(video.videoHeight*scale);
               ctx.drawImage(video,0,0,canvas.width,canvas.height);
               const image=ctx.getImageData(0,0,canvas.width,canvas.height),code=jsQR?jsQR(image.data,image.width,image.height,{inversionAttempts:'attemptBoth'}):null;
               if(code){acceptQr(code.data);return;}
-            }else if(!state.scanBusy&&performance.now()-state.lastBarcodeScanAt>=180){
+            }else if(!state.zxingControls&&!state.scanBusy&&performance.now()-state.lastBarcodeScanAt>=180){
               state.scanBusy=true;state.lastBarcodeScanAt=performance.now();
               const jan=await scanJanVideo(video,canvas,ctx);state.scanBusy=false;
               if(jan&&completeJanScan(jan,dialog))return;
@@ -455,17 +526,19 @@
         }
         state.cameraFrame=requestAnimationFrame(frame);
       };
-      state.cameraFrame=requestAnimationFrame(frame);
+      if(mode==='qr'||!state.zxingControls)state.cameraFrame=requestAnimationFrame(frame);
     }
     function stopCamera(){
       if(state.cameraFrame)cancelAnimationFrame(state.cameraFrame);state.cameraFrame=0;state.barcodeDetector=null;state.scanBusy=false;state.lastBarcodeScanAt=0;
+      const controls=state.zxingControls;state.zxingControls=null;state.zxingReader=null;
+      try{controls?.stop()}catch{}
       if(state.cameraStream){state.cameraStream.getTracks().forEach(track=>track.stop());state.cameraStream=null;}
       const video=$('camera-video');if(video){video.pause();video.srcObject=null;}
     }
     $('scanner-dialog').addEventListener('close',stopCamera);
     function csvEscape(value){const s=String(value??'');return /[",\r\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
     function serializeCsv(products){return [HEADER,...products.map(p=>[p.model,p.jan,...p.vector.map((v,i)=>i===9?Number(v).toFixed(6):String(v)),p.highlights||''])].map(row=>row.map(csvEscape).join(',')).join('\r\n')+'\r\n'}
-    function normalizeMatchValue(index,value){const lo=[[0,700],[0,4000],[0,80],[0,3000],[4,64],[128,2048],[700,2500],[1,10],[13.3,16],null,null,null,[1,10],[1,10]][index];return Math.max(0,Math.min(1,(Number(value)-lo[0])/(lo[1]-lo[0])))}
+    function normalizeMatchValue(index,value){const lo=[[0,700],[0,4000],[0,60],[0,3000],[4,64],[128,2048],[700,2500],[1,10],[13.3,16],null,null,null,[1,10],[1,10]][index];return Math.max(0,Math.min(1,(Number(value)-lo[0])/(lo[1]-lo[0])))}
     const MATCH_WEIGHTS=[1,1,.8,.6,1,.9,.7,.5,1,.7,.65,.55,.65,.5];
     function matchScore(customer,product){let total=0,weightTotal=0;for(let i=0;i<14;i++){let similarity;if(i===2){const required=normalizeMatchValue(2,customer[i]),available=normalizeMatchValue(2,product[i]);similarity=required===0?1:1-Math.max(0,required-available)}else if(i===9)similarity=Math.abs(Number(customer[i])-Number(product[i]))<.00001?1:0;else if(i===10)similarity=Number(customer[i])===0||((Number(customer[i])&Number(product[i]))!==0)?1:0;else if(i===11)similarity=Number(customer[i])===Number(product[i])?1:0;else similarity=1-Math.abs(normalizeMatchValue(i,customer[i])-normalizeMatchValue(i,product[i]));total+=MATCH_WEIGHTS[i]*similarity;weightTotal+=MATCH_WEIGHTS[i]}return total/weightTotal*100}
     function rankProducts(customer,products,count){return products.map((product,index)=>({...product,match:matchScore(customer,product.vector),_index:index})).sort((a,b)=>Math.abs(b.match-a.match)>1e-12?b.match-a.match:a.model.localeCompare(b.model,'ja')||a.jan.localeCompare(b.jan,'en')||a._index-b._index).slice(0,count)}
