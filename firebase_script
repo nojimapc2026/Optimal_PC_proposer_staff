@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isPcStaff() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/pc_staff/$(request.auth.uid));
+    }
+
+    function validPcRecord(jan) {
+      return request.resource.data.keys().hasAll([
+          'model', 'jan', 'cpuSingle', 'cpuMulti', 'npuTOPS', 'gpu', 'ramGB', 'ssdGB',
+          'weightG', 'design', 'displayInch', 'aspectRatio', 'manufacturerMask',
+          'failureFrequency', 'readability', 'positioning', 'highlights'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'model', 'jan', 'cpuSingle', 'cpuMulti', 'npuTOPS', 'gpu', 'ramGB', 'ssdGB',
+          'weightG', 'design', 'displayInch', 'aspectRatio', 'manufacturerMask',
+          'failureFrequency', 'readability', 'positioning', 'highlights'
+        ])
+        && request.resource.data.jan is string
+        && request.resource.data.jan == jan
+        && (request.resource.data.jan.matches('^[0-9]{8}$') || request.resource.data.jan.matches('^[0-9]{13}$'))
+        && request.resource.data.model is string
+        && request.resource.data.cpuSingle is number
+        && request.resource.data.cpuMulti is number
+        && request.resource.data.npuTOPS is number
+        && request.resource.data.npuTOPS >= 0
+        && request.resource.data.npuTOPS <= 200
+        && request.resource.data.gpu is number
+        && request.resource.data.ramGB is number
+        && request.resource.data.ssdGB is number
+        && request.resource.data.weightG is number
+        && request.resource.data.design is number
+        && request.resource.data.displayInch is number
+        && request.resource.data.aspectRatio is number
+        && request.resource.data.manufacturerMask is number
+        && request.resource.data.failureFrequency is number
+        && request.resource.data.readability is number
+        && request.resource.data.positioning is number
+        && request.resource.data.highlights is string
+        && request.resource.data.highlights.size() <= 500;
+    }
+
+    match /pc_catalog/{jan} {
+      allow get, list: if true;
+      allow create, update: if isPcStaff() && validPcRecord(jan);
+      allow delete: if isPcStaff();
+    }
+
+    match /pc_staff/{uid} {
+      allow read, write: if false;
+    }
+  }
+}
