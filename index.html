@@ -1184,7 +1184,7 @@
           </section>
           <section class="result-card">
             <h2>おすすめPC 上位5機種</h2>
-            <p class="section-lead">同じ0〜1正規化と指定の14項目の重みで算出した一致度順です。</p>
+            <p class="section-lead">画面サイズ帯・故障頻度の優先条件とメーカー優先順位を適用し、非優先12項目の0〜1一致度で順位付けしています。</p>
             <div id="staff-recommendations" class="staff-rec-list" aria-live="polite"></div>
           </section>
           <section class="result-card">
@@ -12737,9 +12737,9 @@
           {
             key: "positioning",
             label: "製品位置付け",
-            unit: "1 entry / 10 high-end",
+            unit: "0＝エントリー／10＝ハイエンド",
             type: "number",
-            min: 1,
+            min: 0,
             max: 10,
             step: 1,
           },
@@ -12962,8 +12962,8 @@
             throw new Error("画面サイズと画面比率の組合せが指定仕様と一致しません。");
           if (v[10] > 32767) throw new Error("メーカーのビットマスクは0〜32767です。");
           if (![0, 1].includes(v[11])) throw new Error("故障頻度は0または1です。");
-          for (const i of [12, 13])
-            if (v[i] < 1 || v[i] > 10) throw new Error(`${SPEC_LABELS[i]}は1〜10の整数です。`);
+          if (v[12] < 1 || v[12] > 10) throw new Error(`${SPEC_LABELS[12]}は1〜10の整数です。`);
+          if (v[13] < 0 || v[13] > 10) throw new Error(`${SPEC_LABELS[13]}は0〜10の整数です。`);
           return v;
         }
         function decodeAnswerCodes(codes) {
@@ -12988,9 +12988,10 @@
           const dCpu = Math.max(0.2, Math.min(1, (singleDemand + multiDemand) / 2));
           const oldGpu = Number(vector[3]);
           const dGpu = oldGpu === 0 ? 0 : Math.max(0, Math.min(1, (oldGpu - 2500) / 18000));
+          const cpuDemand01 = Math.max(0, Math.min(1, (dCpu - 0.2) / 0.8));
           const converted = [...vector];
-          converted[0] = Math.round(60 + 650 * dCpu);
-          converted[1] = Math.round(100 + 4000 * dCpu);
+          converted[0] = Math.round(310 + 182 * cpuDemand01);
+          converted[1] = Math.round(1420 + 1430 * cpuDemand01);
           converted[3] = dGpu === 0 ? 0 : Math.round(80 + 3000 * dGpu);
           return converted;
         }
@@ -13001,6 +13002,47 @@
           const computeNeed = longUse && (taskMask & (32 | 256 | 2048)) !== 0 ? 10 : 0;
           const frequencyNeed = value => (Number(value) === 3 ? 20 : Number(value) === 2 ? 10 : 0);
           return Math.min(50, computeNeed + frequencyNeed(codes[8]) + frequencyNeed(codes[10]));
+        }
+        function recalibratePreferenceVector(vector, decodedAnswers) {
+          const answers = Object.fromEntries(QR_QUESTIONS.map((q, index) => [q.key, decodedAnswers[index]]));
+          const purposeMap = { 仕事: 0.35, 勉強: 0.28, "趣味・娯楽": 0.4 };
+          const purposeRamMap = { 仕事: 16, 勉強: 8, "趣味・娯楽": 16 };
+          const taskMap = {
+            ウェブ検索: { cpu: 0.24, gpu: 0.1, ram: 8 },
+            メールの送受信: { cpu: 0.22, gpu: 0.03, ram: 8 },
+            "文書作成・編集": { cpu: 0.3, gpu: 0.1, ram: 16 },
+            "表計算・データ管理": { cpu: 0.42, gpu: 0.15, ram: 16 },
+            "プレゼンテーション資料作成・発表": { cpu: 0.42, gpu: 0.15, ram: 16 },
+            "画像・動画の編集": { cpu: 0.78, gpu: 0.85, ram: 32 },
+            "SNS・ブログの更新": { cpu: 0.3, gpu: 0.05, ram: 8 },
+            "ネットショッピング・銀行決済": { cpu: 0.22, gpu: 0.05, ram: 8 },
+            "オンライン会議・通話": { cpu: 0.4, gpu: 0.15, ram: 16 },
+            ゲーム: { cpu: 0.72, gpu: 0.9, ram: 32 },
+            動画視聴: { cpu: 0.32, gpu: 0.15, ram: 16 },
+            プログラミング: { cpu: 0.7, gpu: 0.12, ram: 16 },
+          };
+          const purposes = Array.isArray(answers.purpose) ? answers.purpose : [];
+          const tasks = (Array.isArray(answers.tasks) ? answers.tasks : []).map(x => taskMap[x]).filter(Boolean);
+          const purposeRam = Math.max(0, ...purposes.map(x => purposeRamMap[x] || 0));
+          const purposeBase = Math.max(0, ...purposes.map(x => purposeMap[x] || 0));
+          const taskCpu = Math.max(0, ...tasks.map(x => x.cpu));
+          const taskGpu = Math.max(0, ...tasks.map(x => x.gpu));
+          const yearsAdd = answers.years === "6〜12年" ? 0.1 : answers.years === "3〜5年" ? 0.05 : 0;
+          const multiAdd = answers.multitask === "頻繁にする" ? 0.13 : answers.multitask === "たまにする" ? 0.06 : 0;
+          const dCpu = Math.max(0.2, Math.min(1, Math.max(purposeBase, taskCpu) + yearsAdd + multiAdd));
+          const cpuDemand01 = Math.max(0, Math.min(1, (dCpu - 0.2) / 0.8));
+          const next = [...vector];
+          next[0] = Math.round(310 + 182 * cpuDemand01);
+          next[1] = Math.round(1420 + 1430 * cpuDemand01);
+          next[3] = taskGpu === 0 ? 0 : Math.round(80 + 3000 * taskGpu);
+          next[4] = Math.min(
+            32,
+            Math.max(16, purposeRam, answers.multitask === "頻繁にする" ? 32 : 16,
+              ...tasks.map(x => x.ram), answers.years === "6〜12年" ? 32 : 16)
+          );
+          const basePosition = answers.years === "6〜12年" ? 8 : answers.years === "3〜5年" ? 6 : 4;
+          next[13] = Math.max(basePosition, Math.round(2.061 + 6.198 * cpuDemand01));
+          return next;
         }
         function parseQr(text) {
           const raw = String(text || "")
@@ -13030,9 +13072,10 @@
           let vector = validateVector(
             version < 5 ? sourceVector.map((value, index) => (index === 2 ? 0 : value)) : sourceVector
           );
-          if (version === 2 || version === 3) vector = validateVector(recalibrateLegacyVector(vector));
           if (version < 5) vector[2] = npuTOPSFromAnswers(answerCodes);
-          return { version, vector: validateVector(vector), answers: decodeAnswerCodes(answerCodes) };
+          const answers = decodeAnswerCodes(answerCodes);
+          vector = recalibratePreferenceVector(vector, answers);
+          return { version, vector: validateVector(vector), answers };
         }
         function fmt(i, v) {
           switch (i) {
@@ -13134,7 +13177,7 @@
                 ? "旧version 2 QRです。質問回答を復元し、旧CPU/GPU要求値とNPU TOPS希望を現行スケールへ換算しました。"
                 : version === 3
                   ? "旧version 3 QRです。質問回答からNPU TOPS希望を再計算し、旧CPU/GPU要求値を現行スケールへ換算しました。"
-                  : "version 5はNPU TOPSスケールです。version 2〜4はQ9・Q11の回答から希望TOPSを再計算しました。実際の電池持ちやファン音は製品仕様・冷却設計も確認してください。";
+                  : "S4のお話は必ずしてください。必要に応じて各機種個別に特徴をお話ししコンサルしてください。";
         }
         function showAnswers(answers, version) {
           $("answer-list").innerHTML = QR_QUESTIONS.map((q, i) => {
@@ -13629,64 +13672,119 @@
               .join("\r\n") + "\r\n"
           );
         }
-        function normalizeMatchValue(index, value) {
-          const lo = [
-            [0, 700],
-            [0, 4000],
-            [0, 60],
-            [0, 3000],
-            [4, 64],
-            [128, 2048],
-            [700, 2500],
-            [1, 10],
-            [13.3, 16],
-            null,
-            null,
-            null,
-            [1, 10],
-            [1, 10],
-          ][index];
-          return Math.max(0, Math.min(1, (Number(value) - lo[0]) / (lo[1] - lo[0])));
-        }
+        const MATCH_RANGES = [
+          [310, 492],
+          [1420, 2850],
+          [0, 60],
+          [0, 3000],
+          [0, 32],
+          [128, 2048],
+          [700, 2500],
+          [1, 10],
+          [13.3, 16],
+          null,
+          null,
+          null,
+          [1, 10],
+          [0, 10],
+        ];
         const MATCH_WEIGHTS = [1, 1, 0.8, 0.6, 1, 0.9, 0.7, 0.5, 1, 0.7, 0.65, 0.55, 0.65, 0.5];
+        const MATCH_SCORE_INDICES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13];
+        const FAILURE_PRONE_MAKER_MASK = [7, 8, 9, 10, 11, 12].reduce(
+          (mask, index) => mask | (1 << index),
+          0
+        );
+        function getRecommendationAnswers(answers) {
+          let carry, weightPref;
+          if (Array.isArray(answers) && answers.length === 15) {
+            carry = answers[1];
+            weightPref = answers[2];
+          } else if (answers && typeof answers === "object" && !Array.isArray(answers)) {
+            carry = answers.carry;
+            weightPref = answers.weightPref;
+          } else return null;
+          if (
+            !["ほとんど持ち運びはしない", "週1〜3日は持ち運びする", "週4〜7日は持ち運びする"].includes(carry) ||
+            !["重さは気にしない", "重い方が良い", "軽い方が良い"].includes(weightPref)
+          )
+            return null;
+          return { carry, weightPref };
+        }
+        function recommendationSizeBand(answers) {
+          const small = [13.3, 14];
+          const large = [15.6, 16];
+          if (answers.weightPref === "軽い方が良い") return small;
+          if (answers.weightPref === "重い方が良い" && answers.carry === "週4〜7日は持ち運びする")
+            return null;
+          if (answers.carry === "ほとんど持ち運びはしない") return large;
+          if (answers.carry === "週4〜7日は持ち運びする") return small;
+          return null;
+        }
+        function normalizeMatchValue(index, value) {
+          const range = MATCH_RANGES[index];
+          if (!range) return 0;
+          return Math.max(0, Math.min(1, (Number(value) - range[0]) / (range[1] - range[0])));
+        }
         function matchScore(customer, product) {
           let total = 0,
             weightTotal = 0;
-          for (let i = 0; i < 14; i++) {
+          for (const i of MATCH_SCORE_INDICES) {
             let similarity;
-            if (i === 2) {
-              const required = normalizeMatchValue(2, customer[i]),
-                available = normalizeMatchValue(2, product[i]);
+            if (i === 2 || i === 4) {
+              const required = normalizeMatchValue(i, customer[i]);
+              const available = normalizeMatchValue(i, product[i]);
               similarity = required === 0 ? 1 : 1 - Math.max(0, required - available);
             } else if (i === 9)
               similarity = Math.abs(Number(customer[i]) - Number(product[i])) < 0.00001 ? 1 : 0;
-            else if (i === 10)
-              similarity =
-                Number(customer[i]) === 0 || (Number(customer[i]) & Number(product[i])) !== 0 ? 1 : 0;
-            else if (i === 11) similarity = Number(customer[i]) === Number(product[i]) ? 1 : 0;
             else
               similarity =
                 1 - Math.abs(normalizeMatchValue(i, customer[i]) - normalizeMatchValue(i, product[i]));
             total += MATCH_WEIGHTS[i] * similarity;
             weightTotal += MATCH_WEIGHTS[i];
           }
-          return (total / weightTotal) * 100;
+          return weightTotal ? (total / weightTotal) * 100 : 0;
         }
-        function rankProducts(customer, products, count) {
-          return products
-            .map((product, index) => ({
-              ...product,
-              match: matchScore(customer, product.vector),
-              _index: index,
-            }))
-            .sort((a, b) =>
-              Math.abs(b.match - a.match) > 1e-12
-                ? b.match - a.match
-                : a.model.localeCompare(b.model, "ja") ||
-                  a.jan.localeCompare(b.jan, "en") ||
-                  a._index - b._index
-            )
-            .slice(0, count);
+        function rankProducts(customer, products, count, rawAnswers) {
+          const answers = getRecommendationAnswers(rawAnswers);
+          if (!answers || !Array.isArray(customer) || customer.length !== 14) return [];
+          const allowedSizes = recommendationSizeBand(answers);
+          const selectedMakerMask = Number(customer[10]) || 0;
+          const excludeFailureProne = Number(customer[11]) === 0;
+          const eligible = products
+            .map((product, index) => ({ ...product, _sourceIndex: index }))
+            .filter(product => {
+              if (!Array.isArray(product.vector) || product.vector.length !== 14) return false;
+              const size = Number(product.vector[8]);
+              if (allowedSizes && !allowedSizes.some(target => Math.abs(size - target) < 0.005)) return false;
+              if (
+                excludeFailureProne &&
+                (Number(product.vector[10]) & FAILURE_PRONE_MAKER_MASK) !== 0
+              )
+                return false;
+              return true;
+            });
+          const scorePool = pool =>
+            pool
+              .map(product => ({ ...product, match: matchScore(customer, product.vector) }))
+              .sort((a, b) =>
+                Math.abs(b.match - a.match) > 1e-12
+                  ? b.match - a.match
+                  : a.model.localeCompare(b.model, "ja") ||
+                    a.jan.localeCompare(b.jan, "en") ||
+                    a._sourceIndex - b._sourceIndex
+              );
+          if (!selectedMakerMask) return scorePool(eligible).slice(0, count);
+          const preferred = eligible.filter(
+            product => (Number(product.vector[10]) & selectedMakerMask) !== 0
+          );
+          const preferredRanked = scorePool(preferred).slice(0, count);
+          const remaining = count - preferredRanked.length;
+          if (remaining <= 0) return preferredRanked;
+          const fallback = eligible.filter(product => {
+            const makerMask = Number(product.vector[10]) || 0;
+            return makerMask !== 0 && (makerMask & selectedMakerMask) === 0;
+          });
+          return preferredRanked.concat(scorePool(fallback).slice(0, remaining));
         }
         const EAN_L = [
             "0001101",
@@ -13997,13 +14095,25 @@
         function renderStaffRecommendations(vector) {
           const mount = $("staff-recommendations");
           if (!mount) return;
+          if (!Array.isArray(vector) || vector.length !== 14) {
+            mount.innerHTML = '<div class="empty-list">相談QRを読み取ると、お客様の条件に合うおすすめを表示します。</div>';
+            return;
+          }
           if (!state.ready) {
             mount.innerHTML = '<div class="empty-list">Firestoreカタログを読み込んでいます。</div>';
             return;
           }
-          const ranked = rankProducts(vector, state.products, 5);
-          if (!ranked.length) {
+          if (!getRecommendationAnswers(state.answers)) {
+            mount.innerHTML = '<div class="empty-list">この旧形式QRには持ち運び・重さなどの回答が含まれないため、条件を厳守したおすすめを出せません。お客様用サイトで最新のQRを再作成してください。</div>';
+            return;
+          }
+          if (!state.products.length) {
             mount.innerHTML = '<div class="empty-list">FirestoreのPCカタログに商品データがありません。</div>';
+            return;
+          }
+          const ranked = rankProducts(vector, state.products, 5, state.answers);
+          if (!ranked.length) {
+            mount.innerHTML = '<div class="empty-list">持ち運び・重さ・故障頻度などの条件を満たすPCがカタログにありません。条件を緩めず、該当条件の商品を登録・確認してください。</div>';
             return;
           }
           mount.innerHTML = ranked
